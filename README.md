@@ -2,6 +2,7 @@
 ---
 ### Descripción:
 **Set Sharing Site**
+
 La tarea consiste en implementar alguna funcionalidad de un sitio para compartir datos. En general los 
 usuarios deben poder ver los datos, subirlos, bajarlos, y compartirlos en la plataforma.
 El grupo debe decidir en cuál base de datos se va a hacer la persistencia de cada uno de los requerimientos, 
