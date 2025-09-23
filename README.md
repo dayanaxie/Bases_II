@@ -1,5 +1,4 @@
-# Proyecto #1
-## Bases de datos II
+# Proyecto #1 - Bases de datos II
 ---
 ### Descripción:
 **Set Sharing Site**
