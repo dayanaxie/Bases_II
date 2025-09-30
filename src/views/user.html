@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuario</title>
+    <link rel="stylesheet" href="./css/globals.css">
+    <link rel="stylesheet" href="./css/styleguide.css">
+    <link rel="stylesheet" href="./css/user.css">
+    
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="profile-container">
+        <div class="header-container">
+            <button class="back-button" aria-label="Volver">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1>Usuario</h1>
+            <button class="logout-button" aria-label="Cerrar sesión">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+
+        <!-- Sección de imagen de perfil -->
+        <div class="profile-image-section">
+            <div class="profile-image-container">
+                <img src="" alt="Foto de perfil" class="profile-image" id="profileImage" onerror="this.style.display='none'; document.getElementById('profilePlaceholder').style.display='flex';">
+                <div class="profile-image-placeholder" id="profilePlaceholder">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="profile-info">
+            <div class="info-group">
+                <label>Nombre de usuario:</label>
+                <div class="info-value">usuario123</div>
+            </div>
+            
+            <div class="info-group">
+                <label>Nombre completo:</label>
+                <div class="info-value">María González Pérez</div>
+            </div>
+            
+            <div class="info-group">
+                <label>Correo electrónico:</label>
+                <div class="info-value">maria.gonzalez@email.com</div>
+            </div>
+            
+            <div class="info-group">
+                <label>Contraseña:</label>
+                <div class="info-value">••••••••</div>
+            </div>
+            
+            <div class="info-group">
+                <label>Fecha de nacimiento:</label>
+                <div class="info-value">15/03/1990</div>
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button class="edit-button">Editar</button>
+        </div>
+    </div>
+</body>
+</html>

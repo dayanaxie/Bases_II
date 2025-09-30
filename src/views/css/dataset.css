@@ -1,0 +1,128 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: var(--variable-collection-fondo-0);
+  /* background-color: peru; */
+  margin: 0;
+  padding: 0;
+  color: var(--variable-collection-contraste);
+}
+
+.container {
+  max-width: 800px;
+  background-color: var(--variable-collection-objeto-0);
+  margin: 2% auto;
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.header h1 {
+  font-size: var(--h1-size);
+  margin: 0;
+}
+
+.header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--variable-collection-objeto-0);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--variable-collection-contraste);
+}
+
+.tab.active {
+  background-color: white;
+  border-radius: 8px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.info-container {
+  display: flex;
+  gap: 24px;
+  background-color: var(--variable-collection-objeto-0);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.media {
+  flex: 1;
+  text-align: center;
+}
+
+.media p {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.placeholder {
+  width: 120px;
+  height: 120px;
+  background-color: var(--variable-collection-objeto-1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-size: 32px;
+  color: var(--variable-collection-contraste);
+  border: 1px solid var(--variable-collection-contraste);
+}
+
+.details {
+  flex: 2;
+  font-size: 14px;
+}
+
+.details p {
+  margin: 8px 0;
+}
+
+.container-btn-edit {
+  justify-content: center;
+  display: flex;
+  margin-top: 10px;
+}
+
+.edit-btn {
+  margin-top: 16px;
+  display: block;
+  padding: 10px 20px;
+  background-color: var(--variable-collection-contraste);
+  color: var(--variable-collection-text-2);
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+    background-color: rgba(44, 62, 80, 0.9);
+}

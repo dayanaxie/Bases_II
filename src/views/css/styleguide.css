@@ -1,0 +1,11 @@
+:root {
+  --variable-collection-fondo-0: rgba(242, 242, 242, 1);
+  --variable-collection-objeto-0: rgba(232, 232, 232, 1);
+  --variable-collection-objeto-1: rgba(191, 191, 191, 1);
+  --variable-collection-negativo: rgba(146, 107, 106, 1);
+  --variable-collection-contraste: rgba(44, 62, 80, 1);
+  --variable-collection-negativo-suave: rgba(247, 202, 201, 1);
+  --variable-collection-text-2: rgba(180, 199, 221, 1);
+  --variable-collection-text-1: rgba(51, 51, 51, 1);
+  --h1-size: 28px;
+}
