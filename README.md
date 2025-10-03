@@ -23,3 +23,41 @@ Las otras 2 bases de datos pueden ser en la nube o pueden ser locales, no hay re
 - Utilizar multiples nodos y contenedores en las 4 bases de datos.
 
 ---
+
+## Databases used
+
+### Mongo
+### Neo4j
+### Redis
+
+#### Initialization
+For this Redis DB we are using a master node and a replica. All writes are handled by the master and all reads by the replica. For that we are using the following section of our `docker-compose.yml`.
+```
+  # --------------------------
+  # Redis Master (Primary)
+  # --------------------------
+  redis-master:
+    image: redis:7
+    container_name: redis-master
+    command: redis-server --appendonly yes --requirepass redispass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+
+  # --------------------------
+  # Redis Replica (Secondary)
+  # --------------------------
+  redis-replica:
+    image: redis:7
+    container_name: redis-replica
+    command: redis-server --appendonly yes --replicaof redis-master 6379 --requirepass redispass --masterauth redispass
+    ports:
+      - "6380:6379"
+    depends_on:
+      - redis-master
+    volumes:
+      - redis_replica_data:/data
+```
+#### Testing
+After running the docker file, use the command `node src/tests/test-redis.js`. This will try to write into the cluster and then read from it.
