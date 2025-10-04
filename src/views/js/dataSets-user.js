@@ -1,7 +1,7 @@
 // Datos de ejemplo (mock). Luego reemplazas esto con el resultado de tu query.
 const datasetsMock = [
   { id: 1, title: "Conjunto de Datos 1", user: "Usuario A", status: "soft" },
-  { id: 2, title: "Conjunto de Datos 2", user: "Usuario B", status: "negative" },
+  { id: 2, title: "Conjunto de Datos 2", user: "Usuario B", status: "negative" }, 
   { id: 3, title: "Conjunto de Datos 3", user: "Usuario C", status: "soft" }
 ];
 
