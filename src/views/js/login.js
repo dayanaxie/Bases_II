@@ -95,7 +95,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Redirigir a la página de datasets
                 setTimeout(() => {
-                    window.location.href = '/homeUser';
+                    if (result.user.tipoUsuario === 'admin') {
+                        window.location.href = '/homeAdmin';
+                    } else {
+                        window.location.href = '/homeUser';
+                    }
                 }, 2000);
             } else {
                 showMessage(result.message || 'Error al iniciar sesión', 'error');

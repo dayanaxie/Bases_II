@@ -43,6 +43,12 @@ app.get("/register", (req, res) => {
 app.get("/homeUser", (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-user.html"));
 });
+
+app.get("/homeAdmin", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/dataSets-admin.html"));
+});
+
+
 app.get("/datasets", (req, res) => {
   res.sendFile(path.join(__dirname, "views/datasets.html"));
 });

@@ -44,7 +44,15 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       message: 'Login exitoso',
-      user: user
+      user: {
+        _id: user._id,
+        username: user.username,
+        nombreCompleto: user.nombreCompleto,
+        correoElectronico: user.correoElectronico,
+        tipoUsuario: user.tipoUsuario, // ← Esto es importante
+        foto: user.foto,
+        fechaNacimiento: user.fechaNacimiento
+      }
     });
 
   } catch (error) {
