@@ -165,7 +165,10 @@ services:
     env_file:
       - .env
     volumes:
+      - /app/node_modules  # Evitar sobrescribir node_modules
       - .:/usr/src/app
+    command: npm run dev  
+
 
 volumes:
   mongo1_data:

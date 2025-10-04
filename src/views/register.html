@@ -12,7 +12,7 @@
   </head>
   <body>
     <div class="container">
-      <a href="#" class="back-arrow">
+      <a href="/login" class="back-arrow">
         <i class="fas fa-arrow-left"></i>
       </a>
 
@@ -20,51 +20,63 @@
         <h1>Registro</h1>
       </div>
 
-      <div class="form-container">
-        <div class="right-column">
-          <div class="avatar-section">
-            <div class="avatar-placeholder" id="avatar-preview">
-              <i class="fas fa-user-plus"></i>
+      <!-- Agregar formulario -->
+      <form id="registerForm" enctype="multipart/form-data">
+        <div class="form-container">
+          <div class="right-column">
+            <div class="avatar-section">
+              <div class="avatar-placeholder" id="avatar-preview">
+                <i class="fas fa-user-plus"></i>
+              </div>
+              <button type="button" class="avatar-btn" id="upload-btn">
+                Subir imagen
+              </button>
+              <input
+                type="file"
+                id="avatar-input"
+                name="foto"
+                accept="image/*"
+                style="display: none"
+              />
             </div>
-            <button type="button" class="avatar-btn" id="upload-btn">
-              Subir imagen
-            </button>
-            <input
-              type="file"
-              id="avatar-input"
-              accept="image/*"
-              style="display: none"
-            />
-          </div>
-          <div class="form-group">
-            <label for="username">Nombre de usuario:</label>
-            <input type="text" id="username" name="username" required />
-          </div>
-          <div class="form-group">
-            <label for="nombre">Nombre completo:</label>
-            <input type="text" id="nombre" name="nombre" required />
-          </div>
-          <div class="form-group">
-            <label for="email">Correo electrónico:</label>
-            <input type="email" id="email" name="email" required />
-          </div>
-          <div class="form-group">
-            <label for="password">Contraseña:</label>
-            <input type="password" id="password" name="password" required />
-          </div>
-          <div class="form-group">
-            <label for="birthdate">Fecha de nacimiento:</label>
-            <input type="date" id="birthdate" name="birthdate" required />
+            <div class="form-group">
+              <label for="username">Nombre de usuario:</label>
+              <input type="text" id="username" name="username" required />
+              <span class="error-message" id="username-error"></span>
+            </div>
+            <div class="form-group">
+              <label for="nombre">Nombre completo:</label>
+              <input type="text" id="nombre" name="nombreCompleto" required />
+              <span class="error-message" id="nombre-error"></span>
+            </div>
+            <div class="form-group">
+              <label for="email">Correo electrónico:</label>
+              <input type="email" id="email" name="correoElectronico" required />
+              <span class="error-message" id="email-error"></span>
+            </div>
+            <div class="form-group">
+              <label for="password">Contraseña:</label>
+              <input type="password" id="password" name="password" required />
+              <span class="error-message" id="password-error"></span>
+            </div>
+            <div class="form-group">
+              <label for="birthdate">Fecha de nacimiento:</label>
+              <input type="date" id="birthdate" name="fechaNacimiento" required />
+              <span class="error-message" id="birthdate-error"></span>
+            </div>
           </div>
         </div>
-        
-      </div>
 
-      <div class="submit-container">
-        <button type="submit" class="submit-btn">Registrarme</button>
-      </div>
+        <div class="submit-container">
+          <button type="submit" class="submit-btn" id="submit-btn">Registrarme</button>
+        </div>
+      </form>
+
+      <!-- Mensaje de resultado -->
+      <div id="message" style="display: none;"></div>
     </div>
 
     <script src="./js/selectImage.js"></script>
+    <script src="./js/register.js"></script>
   </body>
 </html>
