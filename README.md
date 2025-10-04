@@ -23,3 +23,10 @@ Las otras 2 bases de datos pueden ser en la nube o pueden ser locales, no hay re
 - Utilizar multiples nodos y contenedores en las 4 bases de datos.
 
 ---
+
+### Project Initialization
+Use `docker-compose up -d` inside the main folder (`BASES_II`) to start the project. If the mongo1 container fails to start you can try using `docker-compose down -v` and run the command to start it again (Note: this will remove the volumes created for the container, so all data created will be lost).
+
+### Node JS Dependencies
+#### Nodemon
+This dependency helps us automatically restart the node container whenever a change is detected in one of the files.

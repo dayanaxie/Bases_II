@@ -8,6 +8,8 @@ COPY package*.json ./
 
 # Instalar dependencias
 RUN npm install
+# Instalar nodemon globalmente
+RUN npm install -g nodemon
 
 # Copiar el resto de los archivos de la aplicación
 COPY . .
@@ -16,4 +18,4 @@ COPY . .
 EXPOSE 3000
 
 # El comando importante - apuntar a app.js
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]
