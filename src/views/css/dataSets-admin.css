@@ -180,3 +180,25 @@ p {
   background-color: var(--variable-collection-text-2);
   color: var(--variable-collection-contraste);
 }
+
+.floating-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 45px;
+  height: 40px;
+  border-radius: 30%;
+  background-color: var(--variable-collection-objeto-1);
+  border: 1px solid var(--variable-collection-contraste);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 22px;
+  color: var(--variable-collection-contraste);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.floating-btn:hover {
+  background-color: var(--variable-collection-objeto-2);
+}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" /> 
+    <title>Crear DataSet</title>
+    <link rel="stylesheet" href="./css/styleguide.css" />
+    <!-- <link rel="stylesheet" href="./css/dataset.css" /> --> 
+    <link rel="stylesheet" href="./css/crear-dataSet.css" />
+
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <a href="#" class="back-arrow">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+
+      <div class="header">
+        <h1>Crear DataSet</h1>
+      </div>
+
+      
+      <div class="form-container">
+        
+        <div class="left-column">
+
+          <div class="videoImage-section">
+
+            <div class="image-placeholder" id="image-placeholder">
+              <i class="fa-solid fa-image"></i>
+            </div>
+            <button type="button" class="image-btn" id="upload-image-btn">
+              Subir imagen
+            </button>
+            <!-- <input type="file"  id="avatar-input" accept="image/*" style="display: none" /> -->
+             <div class="video-placeholder" id="video-placeholder">
+              <i class="fa-solid fa-video"></i>
+            </div>
+            <button type="button" class="video-btn" id="upload-video-btn">
+              Video de guía
+            </button>
+
+
+          </div>
+            
+        </div>
+            
+        <div class="right-column">
+           
+          <div class="form-group">
+            <label for="datasetName">Nombre del DataSet:</label>
+            <input type="text" id="datasetName" name="datasetName" required />
+          </div>
+          <div class="form-group">
+            <label for="descripcion">Descripción:</label>
+            <textarea id="descripcion" name="descripcion" required></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="inclusionDate">Fecha de inclusión:</label>
+            <input type="date" id="inclusionDate" name="inclusionDate" required />
+          </div>
+
+          <div class="form-group">
+            <label for="files">Archivos:</label>
+            <div class="file-upload-container">
+              <button type="button" class="file-upload-btn" id="upload-files-btn">Seleccionar archivos</button>
+              <span class="file-upload-text" id="file-upload-text">Ningún archivo seleccionado</span>
+            </div>
+            <input type="file" id="files" name="files" multiple />
+          </div> 
+        </div>      
+
+    </div>
+    <div class="submit-container">
+        <button type="submit" class="submit-btn">Crear DataSet</button>
+    </div> 
+    </div> 
+  </body>
+</html>
