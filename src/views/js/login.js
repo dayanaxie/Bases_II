@@ -93,9 +93,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Redirigir según el tipo de usuario
                 setTimeout(() => {
                     if (result.user.tipoUsuario === 'admin') {
-                        window.location.href = '/homeAdmin';
+                        window.location.href = '/datasetsAdmin';
                     } else {
-                        window.location.href = '/homeUser';
+                        window.location.href = '/datasetsUser';
                     }
                 }, 2000);
             } else {
