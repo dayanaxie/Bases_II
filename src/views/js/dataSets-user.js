@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const userData = getCurrentUser();
     
     if (userData.tipoUsuario === 'admin') {
-        window.location.href = '/homeAdmin';
+        window.location.href = '/datasetsAdmin';
         return;
     }
 
@@ -181,7 +181,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Botón flotante para crear nuevo dataset
     floatingBtn.addEventListener('click', function() {
-        window.location.href = '/datasets/new';
+        window.location.href = '/datasetsUser/new';
     });
 
     logoutBtn.addEventListener('click', logout);

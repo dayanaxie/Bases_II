@@ -28,7 +28,7 @@ export const isAdmin = () => {
 export const redirectByUserType = () => {
     const user = getCurrentUser();
     if (!user) return '/login';
-    return user.tipoUsuario === 'admin' ? '/homeAdmin' : '/homeUser';
+    return user.tipoUsuario === 'admin' ? '/datasetAdmin' : '/datasetsUser';
 };
 
 // Verificar token antes de cargar páginas protegidas

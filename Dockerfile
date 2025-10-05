@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 3000
 
 # El comando importante - apuntar a app.js
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "start"]

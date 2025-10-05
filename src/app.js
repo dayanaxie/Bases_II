@@ -43,20 +43,22 @@ app.get("/register", (req, res) => {
 });
 
 // Rutas protegidas (requieren autenticación)
-app.get("/homeUser", (req, res) => {
+app.get("/datasetsUser", (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-user.html"));
 });
 
-app.get("/homeAdmin", (req, res) => {
+app.get("/datasetsAdmin", (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-admin.html"));
 });
 
-app.get("/newDataset", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/create-dataSet.html"));
+
+app.get("/datasetsUser/new", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/create-dataset.html"));
 });
 
 
 // Servir también CSS y JS de views
+// Servir CSS y JS de views
 app.use("/css", express.static(path.join(__dirname, "views/css")));
 app.use("/js", express.static(path.join(__dirname, "views/js")));
 

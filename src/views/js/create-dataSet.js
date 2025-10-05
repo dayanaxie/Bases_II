@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedFilesList.innerHTML = '';
                 
                 setTimeout(() => {
-                    window.location.href = '/homeUser';
+                    window.location.href = '/datasetsUser';
                 }, 2000);
             } else {
                 showMessage(result.error || result.message || 'Error al crear el dataset', 'error');
@@ -151,9 +151,9 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         const userData = getCurrentUser();
         if (userData.tipoUsuario === 'admin') {
-            window.location.href = '/homeAdmin';
+            window.location.href = '/datasetsAdmin';
         } else {
-            window.location.href = '/homeUser';
+            window.location.href = '/datasetsUser';
         }
     });
 });
