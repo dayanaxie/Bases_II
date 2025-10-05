@@ -172,6 +172,56 @@ services:
     volumes:
       - redis_replica_data:/data
 
+   # --------------------------
+  
+  # --------------------------
+  # Neo4j Clusters
+  # --------------------------
+
+  neo4j1:
+    image:  neo4j:4.4
+    container_name: neo4j1
+    hostname: neo4j1
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_server_name=neo4j1
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_server_default__advertised__address=neo4j1
+      - NEO4J_server_default__listen__address=0.0.0.0
+      - NEO4J_dbms_cluster_listen__address=0.0.0.0:5000
+      - NEO4J_dbms_cluster_advertised__address=neo4j1:5000
+      - NEO4J_dbms_cluster_discovery_endpoints=neo4j1:5000,neo4j2:5000
+      - NEO4J_initial_server_mode__constraint=CORE
+      - NEO4J_AUTH=neo4j/password123
+    volumes:
+      - neo4j1_data:/data
+
+  neo4j2:
+    image:  neo4j:4.4
+    container_name: neo4j2
+    hostname: neo4j2
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    environment:
+      - NEO4J_server_name=neo4j2
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_server_default__advertised__address=neo4j2
+      - NEO4J_server_default__listen__address=0.0.0.0
+      - NEO4J_dbms_cluster_listen__address=0.0.0.0:5000
+      - NEO4J_dbms_cluster_advertised__address=neo4j2:5000
+      - NEO4J_dbms_cluster_discovery_endpoints=neo4j1:5000,neo4j2:5000
+      - NEO4J_initial_server_mode__constraint=CORE
+      - NEO4J_AUTH=neo4j/password123
+    volumes:
+      - neo4j2_data:/data
+
+
+
   # --------------------------
   # Node.js App
   # --------------------------
@@ -200,3 +250,6 @@ volumes:
   mongo2_data:
   redis_master_data:
   redis_replica_data:
+  neo4j1_data:
+  neo4j2_data:
+
