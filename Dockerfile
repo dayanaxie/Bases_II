@@ -7,7 +7,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Instalar dependencias
-RUN npm install
+RUN npm install 
 # Instalar nodemon globalmente
 RUN npm install -g nodemon
 

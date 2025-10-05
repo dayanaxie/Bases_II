@@ -12,34 +12,28 @@
 </head>
 <body>
   <div class="container">
-
-    <div class="header-section"> 
-
-      <!-- Header -->
-      <header class="header">
-        <button class="back-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-        <h1>DataSets</h1>
-        <div>
-          <button class="users-btn"><i class="fa-solid fa-user"></i></button>
-          <button class="users-btn"><i class="fa-solid fa-user-group"></i></button>
-        </div>
-      </header>
-  
-      <!-- Search -->
-      <div class="search-bar">
-        <input type="text" placeholder="Buscar...">
-        <button class="filter-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
-        <button class="filter-btn"><i class="fa-solid fa-filter"></i></button>
+    <!-- Header -->
+    <header class="header">
+      <button class="back-btn" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      <h1>DataSets</h1>
+      <div>
+        <button class="users-btn"><i class="fa-solid fa-user"></i></button>
+        <button class="users-btn"><i class="fa-solid fa-user-group"></i></button>
       </div>
+    </header>
 
-    </div> 
-
+    <!-- Search -->
+    <div class="search-bar">
+      <input type="text" placeholder="Buscar...">
+      <button class="filter-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+      <button class="filter-btn"><i class="fa-solid fa-filter"></i></button>
+    </div>
 
     <!-- Dataset list -->
     <div id="datasets" class="datasets"></div>
   </div>
 
   <!-- Script -->
-  <script src="./js/dataSets-admin.js"></script>
+  <script type="module" src="./js/dataSets-admin.js"></script>
 </body>
 </html>

@@ -1,3 +1,17 @@
+import { requireAuth, getCurrentUser, logout } from './auth.js';
+
+const logoutBtn = document.getElementById('logout-btn');
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/login';
+    return;
+  }
+  // ... el resto de tu código ...
+});
+
 // Datos de ejemplo (mock). Luego reemplazas esto con el resultado de tu query.
 const datasetsMock = [
   { id: 1, title: "Conjunto de Datos 1", user: "Usuario A", status: "soft" },
@@ -82,6 +96,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ejemplo de cómo cargarías desde tu query
     // fetchDataFromDB().then(data => renderDatasets(data));
 });
+
+logoutBtn.addEventListener('click', logout);
 
 // <i class="fa-regular fa-circle"></i>
 // <i class="fa-solid fa-ban"></i>

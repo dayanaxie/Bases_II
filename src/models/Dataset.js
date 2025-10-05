@@ -13,7 +13,12 @@ const datasetSchema = new mongoose.Schema({
     default: "pendiente"               // cuando se crea
   },
   tamano: { type: Number, default: 0 },  // en bytes o MB
-  descargas: { type: Number, default: 0 } 
+  descargas: { type: Number, default: 0 },
+  creadorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
 });
 
 export default mongoose.model("Dataset", datasetSchema);
