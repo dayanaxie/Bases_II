@@ -147,6 +147,32 @@ services:
       start_period: 60s
 
   # --------------------------
+  # Redis Master (Primary)
+  # --------------------------
+  redis-master:
+    image: redis:7
+    container_name: redis-master
+    command: redis-server --appendonly yes --requirepass redispass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+
+  # --------------------------
+  # Redis Replica (Secondary)
+  # --------------------------
+  redis-replica:
+    image: redis:7
+    container_name: redis-replica
+    command: redis-server --appendonly yes --replicaof redis-master 6379 --requirepass redispass --masterauth redispass
+    ports:
+      - "6380:6379"
+    depends_on:
+      - redis-master
+    volumes:
+      - redis_replica_data:/data
+
+  # --------------------------
   # Node.js App
   # --------------------------
   app:
@@ -157,11 +183,11 @@ services:
       - MONGO_URI=mongodb://root:rootpass@mongo1:27017,mongo2:27017/appdb?replicaSet=rs0&authSource=admin
     ports:
       - "${PORT}:3000"
-    depends_on:
-      mongo1:
-        condition: service_healthy
-      mongo2:
-        condition: service_healthy
+    #depends_on:
+    #  mongo1:
+    #    condition: service_healthy
+    #  mongo2:
+    #    condition: service_healthy
     env_file:
       - .env
     volumes:
@@ -170,5 +196,7 @@ services:
 
 
 volumes:
-  mongo1_data:
+  mongo1_data: 
   mongo2_data:
+  redis_master_data:
+  redis_replica_data:
