@@ -16,6 +16,8 @@ async function initAdmin() {
 
     if (existingAdmin) {
       console.log('✅ Usuario admin ya existe');
+      console.log('📧 Email: admin@gmail.com');
+      console.log('🔑 Password: admin123');
       return;
     }
 

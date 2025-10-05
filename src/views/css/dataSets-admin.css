@@ -197,8 +197,40 @@ p {
   display: flex;
   justify-content: center;
   align-items: center;
+  text-decoration: none;
+
 }
 
 .floating-btn:hover {
   background-color: var(--variable-collection-objeto-2);
+}
+
+.dataset-info .dataset-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 4px;
+  align-items: flex-start; /* Esto alinea ambos a la izquierda */
+  width: 100%; /* Asegura que ocupe todo el ancho */
+}
+
+.dataset-info .dataset-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  width: 100%; /* Ocupa todo el ancho disponible */
+  text-align: left; /* Alinea a la izquierda */
+}
+
+.dataset-info .creator-name {
+  font-size: 0.95rem;
+  color: #2e3a46;
+  margin: 0;
+  padding: 0;
+  font-weight: 500;
+  line-height: 1;
+  width: 100%; /* Ocupa todo el ancho disponible */
+  text-align: left; /* Alinea a la izquierda */
 }

@@ -1,13 +1,23 @@
+import { getCurrentUser } from './auth.js';
+
 document.addEventListener('DOMContentLoaded', function() {
+    // ✅ NUEVO: Verificar si ya está logueado y redirigir
+    const userData = getCurrentUser();
+    if (userData) {
+        if (userData.tipoUsuario === 'admin') {
+            window.location.href = '/homeAdmin';
+        } else {
+            window.location.href = '/homeUser';
+        }
+        return; 
+    }
     const loginForm = document.querySelector('form');
     const togglePassword = document.querySelector('.toggle-password');
     const passwordInput = document.getElementById('password');
     const eyeIcon = togglePassword.querySelector('i');
     const submitBtn = document.querySelector('.confirm-button');
     
-    // Función para mostrar mensajes
     function showMessage(message, type = 'success') {
-        // Crear elemento de mensaje si no existe
         let messageDiv = document.getElementById('login-message');
         if (!messageDiv) {
             messageDiv = document.createElement('div');
@@ -31,7 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Toggle para mostrar/ocultar contraseña
     togglePassword.addEventListener('click', function() {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
@@ -47,27 +56,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Manejar el envío del formulario
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
-        // Validaciones básicas
         if (!email || !password) {
             showMessage('Por favor completa todos los campos', 'error');
             return;
         }
 
-        // Validar formato de email
         const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
         if (!emailRegex.test(email)) {
             showMessage('Por favor ingresa un correo electrónico válido', 'error');
             return;
         }
 
-        // Cambiar estado del botón
         submitBtn.disabled = true;
         submitBtn.textContent = 'Iniciando sesión...';
 
@@ -93,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.setItem('user', JSON.stringify(result.user));
                 }
                 
-                // Redirigir a la página de datasets
+                // Redirigir según el tipo de usuario
                 setTimeout(() => {
                     if (result.user.tipoUsuario === 'admin') {
                         window.location.href = '/homeAdmin';
@@ -108,17 +113,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             showMessage('Error de conexión. Inténtalo de nuevo.', 'error');
         } finally {
-            // Restaurar botón
             submitBtn.disabled = false;
             submitBtn.textContent = 'Confirmar';
         }
     });
 
-    // Validación en tiempo real
     const inputs = document.querySelectorAll('input');
     inputs.forEach(input => {
         input.addEventListener('input', function() {
-            // Limpiar mensajes cuando el usuario empiece a escribir
             const messageDiv = document.getElementById('login-message');
             if (messageDiv && messageDiv.style.display !== 'none') {
                 messageDiv.style.display = 'none';

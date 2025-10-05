@@ -5,6 +5,8 @@ import datasetRoutes from "./routes/datasetRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { requireAuth } from "./middleware/auth.js"; 
+
 
 dotenv.config();
 const app = express();
@@ -40,22 +42,19 @@ app.get("/register", (req, res) => {
   res.sendFile(path.join(__dirname, "views/register.html"));
 });
 
-app.get("/homeUser", (req, res) => {
+// Rutas protegidas (requieren autenticación)
+app.get("/homeUser", requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-user.html"));
 });
 
-app.get("/homeAdmin", (req, res) => {
+app.get("/homeAdmin", requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-admin.html"));
 });
 
-
-app.get("/datasets", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/datasets.html"));
+app.get("/newDataset", requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "views/create-dataSet.html"));
 });
 
-app.get("/datasets/new", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/new-dataset.html"));
-});
 
 // Servir también CSS y JS de views
 app.use("/css", express.static(path.join(__dirname, "views/css")));

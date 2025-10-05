@@ -14,7 +14,7 @@
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <button class="back-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      <button class="back-btn" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
       <h1>DataSets</h1>
       <div>
         <button class="users-btn"><i class="fa-solid fa-bell"></i></button>
@@ -35,10 +35,12 @@
 
 
     <!-- Boton flotante-->
-    <button class="floating-btn"><i class="fa-solid fa-plus"></i></button>
+    <a href="/newDataset" class="floating-btn">
+        <i class="fa-solid ">+</i>
+    </a>
   </div>
 
   <!-- Script -->
-  <script src="./js/dataSets-user.js"></script>
+  <script type="module" src="./js/dataSets-user.js"></script>
 </body>
 </html>

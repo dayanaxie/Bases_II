@@ -3,7 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import User from '../models/User.js';
-import upload from '../config/multer.js';
+import { uploadUser } from "../config/multer.js";
+import { apiAuth } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,7 +66,7 @@ router.post('/login', async (req, res) => {
 });
 
 // crear usuario
-router.post('/register', upload.single('foto'), async (req, res) => {
+router.post('/register', uploadUser.single('foto'), async (req, res) => {
   console.log("Datos recibidos:", req.body);
   console.log("Archivo:", req.file);
 
@@ -199,7 +200,7 @@ router.get('/', async (req, res) => {
 });
 
 // obtener usuario por id
-router.get('/:id', async (req, res) => {
+router.get('/:id',  async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password -salt');
     
@@ -231,7 +232,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // actualziar usuario
-router.put('/:id', upload.single('foto'), async (req, res) => {
+router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
   try {
     const {
       username,
