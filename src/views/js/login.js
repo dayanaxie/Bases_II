@@ -1,16 +1,5 @@
-import { getCurrentUser } from './auth.js';
-
 document.addEventListener('DOMContentLoaded', function() {
-    // ✅ NUEVO: Verificar si ya está logueado y redirigir
-    const userData = getCurrentUser();
-    if (userData) {
-        if (userData.tipoUsuario === 'admin') {
-            window.location.href = '/homeAdmin';
-        } else {
-            window.location.href = '/homeUser';
-        }
-        return; 
-    }
+
     const loginForm = document.querySelector('form');
     const togglePassword = document.querySelector('.toggle-password');
     const passwordInput = document.getElementById('password');
@@ -96,6 +85,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Guardar información del usuario en localStorage
                 if (result.user) {
                     localStorage.setItem('user', JSON.stringify(result.user));
+                }
+                if (result.token) {
+                    localStorage.setItem('token', result.token);
                 }
                 
                 // Redirigir según el tipo de usuario

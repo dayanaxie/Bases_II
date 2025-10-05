@@ -43,15 +43,15 @@ app.get("/register", (req, res) => {
 });
 
 // Rutas protegidas (requieren autenticación)
-app.get("/homeUser", requireAuth, (req, res) => {
+app.get("/homeUser", (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-user.html"));
 });
 
-app.get("/homeAdmin", requireAuth, (req, res) => {
+app.get("/homeAdmin", (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataSets-admin.html"));
 });
 
-app.get("/newDataset", requireAuth, (req, res) => {
+app.get("/newDataset", (req, res) => {
   res.sendFile(path.join(__dirname, "views/create-dataSet.html"));
 });
 

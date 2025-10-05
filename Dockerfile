@@ -1,19 +1,21 @@
 FROM node:18-alpine
 
-# Directorio de trabajo dentro del contenedor
+# Crear directorio de la app
 WORKDIR /usr/src/app
 
-# Copiar dependencias primero
+# Copiar package.json y package-lock.json
 COPY package*.json ./
 
 # Instalar dependencias
-RUN npm install
+RUN npm install 
+# Instalar nodemon globalmente
+RUN npm install -g nodemon
 
-# Copiar todo el código
+# Copiar el resto de los archivos de la aplicación
 COPY . .
 
-# Exponer el puerto que usa tu app
+# Exponer el puerto que usa tu app (ajusta según tu app)
 EXPOSE 3000
 
-# Comando por defecto (puede ser sobrescrito en docker-compose)
+# El comando importante - apuntar a app.js
 CMD ["npm", "run", "dev"]

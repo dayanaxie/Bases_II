@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import User from '../models/User.js';
 import { uploadUser } from "../config/multer.js";
-import { apiAuth } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,16 +42,24 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Login exitoso
+    // 🔒 Generar token JWT
+    const token = jwt.sign(
+      { id: user._id, tipoUsuario: user.tipoUsuario, username: user.username },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' } // Token válido por 2 horas
+    );
+
+    // ✅ Responder con token y datos del usuario
     res.json({
       success: true,
       message: 'Login exitoso',
+      token, // ← aquí va el token
       user: {
         _id: user._id,
         username: user.username,
         nombreCompleto: user.nombreCompleto,
         correoElectronico: user.correoElectronico,
-        tipoUsuario: user.tipoUsuario, // ← Esto es importante
+        tipoUsuario: user.tipoUsuario,
         foto: user.foto,
         fechaNacimiento: user.fechaNacimiento
       }
@@ -64,6 +73,7 @@ router.post('/login', async (req, res) => {
     });
   }
 });
+
 
 // crear usuario
 router.post('/register', uploadUser.single('foto'), async (req, res) => {

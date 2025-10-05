@@ -70,16 +70,16 @@ services:
       "
     healthcheck:
       test: |
-        mongosh --eval "
-          try {
-            db.adminCommand('ping');
-            print('MongoDB healthy');
-          } catch (e) {
-            print('MongoDB not healthy:', e);
-            exit(1);
-          }
+        mongosh --host localhost -u root -p rootpass --authenticationDatabase admin --eval "
+        try {
+          db.adminCommand('ping');
+          print('MongoDB healthy');
+        } catch (e) {
+          print('MongoDB not healthy:', e);
+          exit(1);
+        }
         " | grep -q "MongoDB healthy"
-      interval: 10s
+      interval: 60s
       timeout: 10s
       retries: 10
       start_period: 40s  
@@ -132,16 +132,16 @@ services:
       "
     healthcheck:
       test: |
-        mongosh --eval "
-          try {
-            db.adminCommand('ping');
-            print('MongoDB healthy');
-          } catch (e) {
-            print('MongoDB not healthy:', e);
-            exit(1);
-          }
+        mongosh --host localhost -u root -p rootpass --authenticationDatabase admin --eval "
+        try {
+          db.adminCommand('ping');
+          print('MongoDB healthy');
+        } catch (e) {
+          print('MongoDB not healthy:', e);
+          exit(1);
+        }
         " | grep -q "MongoDB healthy"
-      interval: 10s
+      interval: 60s
       timeout: 10s
       retries: 10
       start_period: 60s
@@ -165,9 +165,8 @@ services:
     env_file:
       - .env
     volumes:
-      - /app/node_modules  # Evitar sobrescribir node_modules
       - .:/usr/src/app
-    command: npm run dev  
+      - /app/node_modules  # Evitar sobrescribir node_modules
 
 
 volumes:

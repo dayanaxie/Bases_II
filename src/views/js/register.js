@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage('¡Usuario registrado exitosamente! Redirigiendo...', 'success');
                 
                 setTimeout(() => {
-                    window.location.href = '/homeUser';
+                    window.location.href = '/login';
                 }, 2000);
             } else {
                 // Mostrar errores del servidor

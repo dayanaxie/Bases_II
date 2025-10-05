@@ -1,8 +1,8 @@
-
 // Verificar si el usuario está autenticado
 export const isAuthenticated = () => {
     const user = localStorage.getItem('user');
-    return user !== null;
+    const token = localStorage.getItem('token');
+    return user !== null && token !== null;
 };
 
 // Obtener datos del usuario
@@ -14,16 +14,8 @@ export const getCurrentUser = () => {
 // Cerrar sesión
 export const logout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     window.location.href = '/login';
-};
-
-// Verificar autenticación y redirigir si no está logueado
-export const requireAuth = () => {
-    if (!isAuthenticated()) {
-        window.location.href = '/login';
-        return false;
-    }
-    return true;
 };
 
 // Verificar si es admin
@@ -36,6 +28,15 @@ export const isAdmin = () => {
 export const redirectByUserType = () => {
     const user = getCurrentUser();
     if (!user) return '/login';
-    
     return user.tipoUsuario === 'admin' ? '/homeAdmin' : '/homeUser';
 };
+
+// Verificar token antes de cargar páginas protegidas
+export function requireAuth() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/login';
+    return false;
+  }
+  return true;
+}
