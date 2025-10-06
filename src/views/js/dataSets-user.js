@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!requireAuth()) return;
     
     const logoutBtn = document.getElementById('logout-btn');
+    const usersBtn = document.getElementById('users-btn');
     
     const userData = getCurrentUser();
     
@@ -196,6 +197,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Botón flotante para crear nuevo dataset
     floatingBtn.addEventListener('click', function() {
         window.location.href = '/datasetsUser/new';
+    });
+
+    usersBtn.addEventListener('click', function() {
+        window.location.href = '/usersUser';
     });
 
     logoutBtn.addEventListener('click', logout);

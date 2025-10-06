@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Iniciando sesión...';
+        submitBtn.textContent = 'Iniciando...';
 
         try {
             const response = await fetch('http://localhost:3000/api/users/login', {

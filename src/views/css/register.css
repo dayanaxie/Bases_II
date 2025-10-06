@@ -138,6 +138,7 @@ input:focus {
 
 .submit-container {
   text-align: center;
+  justify-content: center;
   margin-top: 10px;
 }
 
@@ -155,8 +156,11 @@ input:focus {
   margin-top: 10px;
 }
 
-.submit-btn:hover {
-    background-color: rgba(44, 62, 80, 0.9);
+.submit-btn:hover,
+.submit-btn:focus {
+    background-color: var(--variable-collection-text-2);
+    color: var(--variable-collection-contraste);
+    border: 1px solid var(--variable-collection-contraste);
 }
 
 /* Responsive adjustments */
