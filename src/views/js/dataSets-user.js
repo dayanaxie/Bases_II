@@ -191,6 +191,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     logoutBtn.addEventListener('click', logout);
 
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) {
+        profileBtn.addEventListener('click', function() {
+            window.location.href = '/profile-user';
+        });
+    }
+
 
     // Inicialización con datos reales
     await loadDatasets();

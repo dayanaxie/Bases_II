@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Configurar botones
     const logoutBtn = document.getElementById('logout-btn');
     const datasetsBtn = document.getElementById('datasets-btn');
+    const profileBtn = document.getElementById('profile-btn');
 
     // Event listener para logout
     if (logoutBtn) {
@@ -28,6 +29,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (datasetsBtn) {
         datasetsBtn.addEventListener('click', function() {
             window.location.href = '/datasetsUser';
+        });
+    }
+
+    // Event listener para ir a perfil
+    if (profileBtn) {
+        profileBtn.addEventListener('click', function() {
+            window.location.href = '/profile-user';
         });
     }
 

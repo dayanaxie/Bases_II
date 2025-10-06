@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectMongo from "./config/mongo.js";
+import { testNeo4jConnection } from "./config/neo4j.js";
 import datasetRoutes from "./routes/datasetRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import path from "path";
@@ -21,6 +22,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Conexión a Mongo
 connectMongo();
+
+// Conexión a Neo4j
+testNeo4jConnection().then(connected => {
+  if (connected) {
+    console.log('🚀 Neo4j listo para usar');
+  }
+});
 
 // Rutas API REST
 app.use("/api/datasets", datasetRoutes);
@@ -62,6 +70,9 @@ app.get("/usersUser", (req, res) => {
   res.sendFile(path.join(__dirname, "views/users-user.html"));
 });
 
+app.get("/profile-user", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/profile-user.html"));
+});
 
 // Servir también CSS y JS de views
 // Servir CSS y JS de views

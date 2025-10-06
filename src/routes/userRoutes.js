@@ -5,11 +5,100 @@ import express from 'express';
 import User from '../models/User.js';
 import { uploadUser } from "../config/multer.js";
 import jwt from 'jsonwebtoken';
-
+import mongoose from 'mongoose';
+import { createUserReferenceInNeo4j, followUser, unfollowUser, isFollowing, getFollowers, getFollowing } from '../config/neo4j.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
+
+
+// Seguir usuario
+router.post('/follow', async (req, res) => {
+  try {
+    const { followerId, followedId } = req.body;
+
+    if (!followerId || !followedId) {
+      return res.status(400).json({
+        success: false,
+        message: 'followerId y followedId son requeridos'
+      });
+    }
+
+    await followUser(followerId, followedId);
+
+    res.json({
+      success: true,
+      message: 'Usuario seguido exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error en follow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// Dejar de seguir usuario
+router.post('/unfollow', async (req, res) => {
+  try {
+    const { followerId, followedId } = req.body;
+
+    if (!followerId || !followedId) {
+      return res.status(400).json({
+        success: false,
+        message: 'followerId y followedId son requeridos'
+      });
+    }
+
+    await unfollowUser(followerId, followedId);
+
+    res.json({
+      success: true,
+      message: 'Dejado de seguir exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error en unfollow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// Verificar si está siguiendo
+router.post('/isfollowing', async (req, res) => {
+  try {
+    const { followerId, followedId } = req.body;
+
+    if (!followerId || !followedId) {
+      return res.status(400).json({
+        success: false,
+        message: 'followerId y followedId son requeridos'
+      });
+    }
+
+    const following = await isFollowing(followerId, followedId);
+
+    res.json({
+      success: true,
+      isFollowing: following
+    });
+
+  } catch (error) {
+    console.error('Error en isFollowing:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
 
 // login 
 router.post('/login', async (req, res) => {
@@ -73,7 +162,6 @@ router.post('/login', async (req, res) => {
     });
   }
 });
-
 
 // crear usuario
 router.post('/register', uploadUser.single('foto'), async (req, res) => {
@@ -162,6 +250,15 @@ router.post('/register', uploadUser.single('foto'), async (req, res) => {
     
     // Guardar usuario en la base de datos
     await newUser.save();
+
+    // Crear referencia en Neo4j (solo el ID)
+    try {
+      await createUserReferenceInNeo4j(newUser._id);
+      console.log('✅ Referencia de usuario creada en Neo4j');
+    } catch (neo4jError) {
+      console.error('⚠️ Usuario creado en MongoDB pero falló en Neo4j:', neo4jError.message);
+      // No fallamos la petición completa si Neo4j falla
+    }
 
     res.status(201).json({
       success: true,
@@ -352,5 +449,127 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
   }
 });
 
+// Obtener seguidores de un usuario con datos completos - CORREGIDO
+router.get('/followers/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params; 
+    
+    // Obtener IDs de seguidores desde Neo4j
+    const followerIds = await getFollowers(userId); 
+    
+    if (followerIds.length === 0) { 
+      return res.json({
+        success: true,
+        followers: []
+      });
+    }
+
+    // Convertir strings a ObjectId
+    const objectIds = followerIds.map(id => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch (error) {
+        console.error('❌ Error convirtiendo ID:', id, error);
+        return null;
+      }
+    }).filter(id => id !== null);
+
+    // Obtener datos completos de los seguidores desde MongoDB
+    const followers = await User.find(
+      { _id: { $in: objectIds } },
+      'username nombreCompleto correoElectronico foto fechaNacimiento tipoUsuario'
+    );
+
+    res.json({
+      success: true,
+      followers: followers
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo seguidores:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// Obtener usuarios seguidos con datos completos - CORREGIDO
+router.get('/following/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    
+    // Obtener IDs de usuarios seguidos desde Neo4j
+    const followingIds = await getFollowing(userId);
+    
+    
+    if (followingIds.length === 0) {
+      return res.json({
+        success: true,
+        following: []
+      });
+    }
+
+    // Convertir strings a ObjectId
+    const objectIds = followingIds.map(id => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch (error) {
+        console.error('❌ Error convirtiendo ID:', id, error);
+        return null;
+      }
+    }).filter(id => id !== null);
+    
+
+    // Obtener datos completos de los usuarios seguidos desde MongoDB
+    const following = await User.find(
+      { _id: { $in: objectIds } },
+      'username nombreCompleto correoElectronico foto fechaNacimiento tipoUsuario'
+    );
+
+
+    res.json({
+      success: true,
+      following: following
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo seguidos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// Buscar usuarios 
+router.get('/search/:query', async (req, res) => {
+  try {
+    const { query } = req.params;
+    
+    const users = await User.find({
+      $or: [
+        { username: { $regex: query, $options: 'i' } },
+        { nombreCompleto: { $regex: query, $options: 'i' } }
+      ],
+      tipoUsuario: { $ne: 'admin' } // Excluir administradores
+    }, 'username nombreCompleto foto').limit(20);
+
+    res.json({
+      success: true,
+      users: users
+    });
+
+  } catch (error) {
+    console.error('Error buscando usuarios:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+});
 
 export default router;

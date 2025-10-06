@@ -177,10 +177,19 @@
     transform: translateY(0);
 }
 
+.follow-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
 .follow-btn.following {
     background: var(--variable-collection-text-2);
     color: var(--variable-collection-contraste);
     border-color: var(--variable-collection-contraste);
+}
+
+.follow-btn.following:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
 }
 
 .follow-btn:disabled {

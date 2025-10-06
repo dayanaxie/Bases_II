@@ -17,11 +17,12 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "neo4j-driver": "^6.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10",
     "ioredis": "^5.8.0",
-    "mongoose": "^8.18.2"
+    "mongoose": "^8.18.2",
+    "nodemon": "^3.1.10"
   }
 }
