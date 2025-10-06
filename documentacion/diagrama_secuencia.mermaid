@@ -1,0 +1,82 @@
+sequenceDiagram
+    participant U as User
+    participant A as Auth Service
+    participant S as Session Store (Redis)
+    participant DS as Dataset Service
+    participant Q as Query Cache (Redis)
+    participant Neo4j as Neo4j DB
+    participant Mongo as MongoDB
+
+    %% User Authentication Flow
+    Note over U, Mongo: Authentication & Session Management
+    U->>A: Login(username, password)
+    A->>Mongo: Verify user credentials (Usuario collection)
+    Mongo-->>A: User data (userId, username, tipo, techs)
+    A->>S: Create session (key: session:userId)
+    S-->>A: Session created
+    A-->>U: Authentication successful
+    
+    %% Dataset Interaction Flow
+    Note over U, Neo4j: Dataset Browsing & Relationships
+    U->>DS: Browse datasets
+    DS->>Neo4j: fetch_installation() - Get dataset relationships
+    Neo4j-->>DS: Dataset graph data (connections, follows)
+    DS->>Mongo: Get dataset details (description, attribute, video_gala)
+    Mongo-->>DS: Dataset metadata
+    DS-->>U: Display datasets with relationships
+    
+    %% Query Execution with Caching
+    Note over U, Q: Query Processing
+    U->>DS: Execute query
+    DS->>Q: Check cache (key: eschequer-y-query_hash)
+    alt Cache Hit
+        Q-->>DS: JSON serialized query result
+    else Cache Miss
+        DS->>Neo4j: Execute graph query (relationships, traversals)
+        Neo4j-->>DS: Graph query results
+        DS->>Mongo: Get document data (cardioid_dressages, usata_crossor)
+        Mongo-->>DS: Document results
+        DS->>Q: Store combined result (TTL: 300s)
+    end
+    DS-->>U: Display query results
+    
+    %% Social Interactions - Neo4j for Relationships
+    Note over U, Neo4j: Social Graph Operations
+    U->>DS: Follow dataset/user
+    DS->>Neo4j: Create "Sigue a" relationship
+    Neo4j-->>DS: Relationship confirmed
+    DS-->>U: Follow successful
+    
+    U->>DS: Vote/React to content
+    DS->>Neo4j: Record "Voto" relationship
+    Neo4j-->>DS: Vote relationship created
+    DS-->>U: Reaction successful
+    
+    %% Content Creation - MongoDB for Documents
+    Note over U, Mongo: Content Management
+    U->>DS: Create comment
+    DS->>Mongo: Store "Comentario" document
+    Mongo-->>DS: Comment stored with ID
+    DS->>Neo4j: Create relationship User-[ESCRIBE]->Comment
+    Neo4j-->>DS: Writing relationship established
+    DS-->>U: Comment posted
+    
+    U->>DS: Create dataset
+    DS->>Mongo: Store dataset document
+    Mongo-->>DS: Dataset stored with ID
+    DS->>Neo4j: Create relationship User-[CREA]->Dataset
+    Neo4j-->>DS: Creation relationship established
+    DS-->>U: Dataset created
+    
+    %% Session Management
+    Note over U, S: Session Maintenance
+    loop Periodically
+        U->>S: Update lastAccess (Redis)
+        S-->>U: Session refreshed
+    end
+    
+    %% User Logout
+    U->>A: Logout
+    A->>S: Delete session (key: session:userId)
+    S-->>A: Session deleted
+    A-->>U: Logout successful
