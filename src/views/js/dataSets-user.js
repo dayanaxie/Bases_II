@@ -43,62 +43,85 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // Render dinámico
-    function renderDatasets(data) {
-        const container = document.getElementById("datasets");
-        container.innerHTML = ""; // limpiar antes de renderizar
+        // Render dinámico
+        function renderDatasets(data) {
+            const container = document.getElementById("datasets");
+            container.innerHTML = ""; // limpiar antes de renderizar
 
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            showNoDatasetsMessage();
-            return;
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                showNoDatasetsMessage();
+                return;
+            }
+
+            data.forEach(dataset => {
+                if (!dataset) return; // Saltar elementos nulos
+
+                // Crear tarjeta
+                const card = document.createElement("div");
+                card.classList.add("dataset-card");
+
+                // Info
+                const info = document.createElement("div");
+                info.classList.add("dataset-info");
+                info.innerHTML = `
+                    <div class="dataset-header">
+                        <h3 class="dataset-name">${dataset.nombre || 'Sin nombre'}</h3>
+                        <button class="creator-btn" data-user-id="${dataset.creadorId?._id || ''}">
+                            ${dataset.creadorId && dataset.creadorId.username 
+                                ? dataset.creadorId.username 
+                                : 'Desconocido'}
+                        </button>
+                    </div>
+                    ${dataset.descripcion ? `
+                        <div class="dataset-description">
+                            <p>${dataset.descripcion}</p>
+                        </div>
+                    ` : ''}
+                `;
+
+                // Botones
+                const actions = document.createElement("div");
+                actions.classList.add("dataset-actions");
+
+                // Botón ver
+                const viewBtn = document.createElement("button");
+                viewBtn.classList.add("btn", "view");
+                viewBtn.innerHTML = `<i class="fa-solid fa-eye"></i>`;
+                viewBtn.addEventListener('click', () => viewDataset(dataset._id));
+
+                actions.appendChild(viewBtn);
+
+                card.appendChild(info);
+                card.appendChild(actions);
+
+                container.appendChild(card);
+            });
+
+            addCreatorButtonListeners();
         }
 
-        // Si no hay datasets, mostrar mensaje
-        if (!data || data.length === 0) {
-            showNoDatasetsMessage();
-            return;
+        // Función para agregar event listeners a los botones de creador
+        function addCreatorButtonListeners() {
+            const creatorButtons = document.querySelectorAll('.creator-btn');
+            creatorButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-user-id');
+                    if (userId) {
+                        viewUserProfile(userId);
+                    }
+                });
+            });
         }
 
-        data.forEach(dataset => {
-            if (!dataset) return; // Saltar elementos nulos
-
-            // Crear tarjeta
-            const card = document.createElement("div");
-            card.classList.add("dataset-card");
-
-            // Info
-            const info = document.createElement("div");
-            info.classList.add("dataset-info");
-            info.innerHTML = `
-                <div class="dataset-header">
-                    <h3 class="dataset-name">${dataset.nombre || 'Sin nombre'}</h3>
-                    <h2 class="creator-name">
-                        ${dataset.creadorId && dataset.creadorId.username 
-                            ? dataset.creadorId.username 
-                            : 'Desconocido'}
-                    </h2>
-                </div>
-            `;
-
-            // Botones
-            const actions = document.createElement("div");
-            actions.classList.add("dataset-actions");
-
-            // Botón ver
-            const viewBtn = document.createElement("button");
-            viewBtn.classList.add("btn", "view");
-            viewBtn.innerHTML = `<i class="fa-solid fa-eye"></i>`;
-            viewBtn.addEventListener('click', () => viewDataset(dataset._id));
-
-            actions.appendChild(viewBtn);
-
-            // Juntar
-            card.appendChild(info);
-            card.appendChild(actions);
-
-            container.appendChild(card);
-        });
-    }
+        // Función para redirigir al perfil del usuario
+        function viewUserProfile(userId) {
+            // Aquí puedes redirigir a la página del perfil del usuario
+            // Por ejemplo:
+            //window.location.href = `/user/${userId}`;
+            
+            // O si quieres mostrar más información del usuario:
+            // showUserInfo(userId);
+        }
 
     // Mensaje cuando no hay datasets
     function showNoDatasetsMessage() {
@@ -131,21 +154,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         retryBtn.addEventListener('click', loadDatasets);
     }
 
-    // Formatear tamaño
-    function formatSize(bytes) {
-        if (!bytes) return '0 B';
-        
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        let i = 0;
-        while (bytes >= 1024 && i < sizes.length - 1) {
-            bytes /= 1024;
-            i++;
-        }
-        return `${bytes.toFixed(1)} ${sizes[i]}`;
-    }
-
     // Funciones para los botones de acción
     function viewDataset(datasetId) {
+        // llevar a la pantalla de ver dataset
+        window.location.href = `/datasetsUser/${datasetId}`;
         
     }
 
@@ -171,9 +183,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                         
             // Buscar en el username del creador
             const usernameMatch = dataset.creadorId?.username?.toLowerCase().includes(searchTerm);
+
+            const descripcionMatch = dataset.descripcion?.toLowerCase().includes(searchTerm);
             
             // Retornar true si coincide con alguno de los criterios
-            return nombreMatch || usernameMatch;
+            return nombreMatch || usernameMatch || descripcionMatch;
         });
         
         renderDatasets(filteredDatasets);

@@ -58,10 +58,21 @@ app.get("/datasetsUser/new", (req, res) => {
   res.sendFile(path.join(__dirname, "views/create-dataset.html"));
 });
 
+app.get("/datasetsUser/:id", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/dataset.html"));
+});
+
 
 // Servir CSS y JS de views
 app.use("/css", express.static(path.join(__dirname, "views/css")));
 app.use("/js", express.static(path.join(__dirname, "views/js")));
+
+// Servir archivos estáticos desde las carpetas de uploads
+app.use('/uploads/dataset-images', express.static(path.join(__dirname, 'uploads/dataset-images')));
+app.use('/uploads/dataset-videos', express.static(path.join(__dirname, 'uploads/dataset-videos')));
+app.use('/uploads/dataset-files', express.static(path.join(__dirname, 'uploads/dataset-files')));
+app.use('/uploads/profile-pictures', express.static(path.join(__dirname, 'uploads/profile-pictures')));
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);

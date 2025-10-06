@@ -46,10 +46,13 @@ router.post("/", uploadDataset.fields([
       tamanoTotal += archivo.size;
     });
 
+    // Convertir a MB con dos decimales
+    tamanoTotal = Number((tamanoTotal / (1024 * 1024)).toFixed(2));
+
+
     const dataset = new Dataset({
       nombre: nombre,
       descripcion: descripcion,
-      fecha_inclusion: new Date(), // Se usa fecha_inclusion en lugar de fechaInclusion
       foto: foto ? `/uploads/dataset-images/${foto.filename}` : null,
       video_guia: video_guia ? `/uploads/dataset-videos/${video_guia.filename}` : null,
       archivos: archivos.map(archivo => `/uploads/dataset-files/${archivo.filename}`),
@@ -99,24 +102,16 @@ router.get("/", async (req, res) => {
 // Obtener dataset por ID
 router.get("/:id", async (req, res) => {
   try {
-    const dataset = await Dataset.findById(req.params.id);
+    const datasetId = req.params.id;
+    const dataset = await Dataset.findById(datasetId).populate('creadorId');
     
     if (!dataset) {
-      return res.status(404).json({
-        success: false,
-        error: "Dataset no encontrado"
-      });
+      return res.status(404).json({ error: 'Dataset no encontrado' });
     }
-
-    res.json({
-      success: true,
-      dataset: dataset
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
+    
+    res.json(dataset);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener el dataset' });
   }
 });
 
@@ -171,33 +166,30 @@ router.put("/:id", uploadDataset.fields([
   }
 });
 
-// Incrementar contador de descargas
-router.patch("/:id/descargar", async (req, res) => {
-  try {
-    const dataset = await Dataset.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { descargas: 1 } },
-      { new: true }
-    );
+// Ruta para incrementar descargas
+router.post('/:id/download', async (req, res) => {
+    try {
+        const datasetId = req.params.id;
+        
+        const dataset = await Dataset.findByIdAndUpdate(
+            datasetId,
+            { $inc: { descargas: 1 } }, 
+            { new: true } 
+        );
 
-    if (!dataset) {
-      return res.status(404).json({
-        success: false,
-        error: "Dataset no encontrado"
-      });
+        if (!dataset) {
+            return res.status(404).json({ error: 'Dataset no encontrado' });
+        }
+
+        res.json({ 
+            success: true, 
+            nuevasDescargas: dataset.descargas 
+        });
+        
+    } catch (error) {
+        console.error('Error incrementando descargas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
-
-    res.json({
-      success: true,
-      message: "Descarga registrada",
-      dataset: dataset
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
-  }
 });
 
 // Cambiar estado del dataset
