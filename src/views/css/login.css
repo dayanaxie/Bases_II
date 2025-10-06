@@ -110,7 +110,9 @@ input[type="password"]:focus {
 }
 
 .confirm-button:hover {
-    background-color: rgba(44, 62, 80, 0.9);
+    background-color: var(--variable-collection-text-2);
+    color: var(--variable-collection-contraste);
+    border: 1px solid var(--variable-collection-contraste);
 }
 
 .register-link {

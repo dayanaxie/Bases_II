@@ -27,6 +27,8 @@ app.use("/api/datasets", datasetRoutes);
 app.use("/api/users", userRoutes);
 
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // ---------------------------
 // Rutas para HTML en views
 // ---------------------------
@@ -56,6 +58,9 @@ app.get("/datasetsUser/new", (req, res) => {
   res.sendFile(path.join(__dirname, "views/create-dataset.html"));
 });
 
+app.get("/usersUser", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/users-user.html"));
+});
 
 // Servir también CSS y JS de views
 // Servir CSS y JS de views

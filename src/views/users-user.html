@@ -14,14 +14,18 @@
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <button class="back-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-      <h1>Usuarios</h1>
-      <div>
-        <button class="users-btn"><i class="fa-solid fa-bell"></i></button>
-        <button class="users-btn"><i class="fa-solid fa-message"></i></button>
-        <button class="users-btn"><i class="fa-solid fa-table"></i></button>
-        <button class="users-btn"><i class="fa-solid fa-user"></i></button>
-      </div>
+        <button class="back-btn" id="logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+        <h1>Usuarios</h1>
+        <div>
+            <button class="users-btn"><i class="fa-solid fa-bell"></i></button>
+            <button class="users-btn"><i class="fa-solid fa-message"></i></button>
+            <button class="users-btn" id="datasets-btn">
+                <i class="fa-solid fa-table"></i>
+            </button>
+            <button class="users-btn"><i class="fa-solid fa-user"></i></button>
+        </div>
     </header>
 
     <!-- Search -->
@@ -34,10 +38,9 @@
     <!-- User list -->
     <div id="users" class="users"></div>
   </div>
-
   
   <!-- Script -->
-  <script src="./js/users.js"></script>
+  <script type="module" src="./js/users-user.js"></script>
  
 </body>
 </html>
