@@ -62,6 +62,7 @@ app.get("/usersUser", (req, res) => {
   res.sendFile(path.join(__dirname, "views/users-user.html"));
 });
 
+
 // Servir también CSS y JS de views
 // Servir CSS y JS de views
 app.use("/css", express.static(path.join(__dirname, "views/css")));

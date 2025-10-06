@@ -109,11 +109,14 @@ input[type="password"]:focus {
     margin-top: 10px;
 }
 
-.confirm-button:hover {
+.confirm-button:hover,
+.confirm-button:focus {
     background-color: var(--variable-collection-text-2);
     color: var(--variable-collection-contraste);
     border: 1px solid var(--variable-collection-contraste);
 }
+
+
 
 .register-link {
     text-align: center;
