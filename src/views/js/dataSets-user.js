@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             datasetsContainer.innerHTML = '<div class="loading">Cargando datasets...</div>';
             
-            const response = await fetch('http://localhost:3000/api/datasets');
+            const response = await fetch('http://localhost:3000/api/datasets/aprobados');
             
             if (!response.ok) {
                 throw new Error('Error al cargar los datasets');

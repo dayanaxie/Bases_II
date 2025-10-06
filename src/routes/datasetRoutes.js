@@ -99,6 +99,25 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Listar todos los datasets aprobados
+router.get("/aprobados", async (req, res) => {
+  try {
+    const datasets = await Dataset.find({ estado: "aprobado" })
+      .populate('creadorId', 'username nombreCompleto')
+      .sort({ fecha_inclusion: -1 });
+    
+    res.json({
+      success: true,
+      datasets: datasets
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
 // Obtener dataset por ID
 router.get("/:id", async (req, res) => {
   try {
