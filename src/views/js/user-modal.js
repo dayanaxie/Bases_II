@@ -6,6 +6,8 @@ class UserModal {
         this.followBtn = document.getElementById('follow-btn');
         this.userData = null;
         this.userDatasets = [];
+
+        window.viewDataset = (datasetId) => this.viewDataset(datasetId);
         
         if (this.modalOverlay && this.modalClose) {
             this.initEventListeners();
@@ -129,9 +131,10 @@ class UserModal {
             `;
             return;
         }
+        console.log('dataset id:', this.userDatasets);
 
         datasetsContainer.innerHTML = this.userDatasets.map(dataset => `
-            <div class="dataset-item" onclick="userModal.viewDataset('${dataset._id}')">
+            <div class="dataset-item" onclick="viewDataset('${dataset._id}')">
                 <div class="dataset-name">${dataset.nombre || 'Sin nombre'}</div>
                 <div class="dataset-meta">
                     <span>${this.formatDate(dataset.fecha_inclusion)}</span>
@@ -141,6 +144,12 @@ class UserModal {
                 </div>
             </div>
         `).join('');
+    }
+
+    viewDataset(datasetId) {
+        console.log('Navegando al dataset:', datasetId);
+        // Redirigir a la página de visualización del dataset
+        window.location.href = `/datasetsUser/${datasetId}`;
     }
 
     // Llenar modal con datos del usuario
@@ -166,18 +175,6 @@ class UserModal {
         this.setElementText('user-datasets-count', this.userDatasets.length);
     }
 
-    // Ver dataset (placeholder)
-    viewDataset(datasetId) {
-        console.log('Ver dataset:', datasetId);
-        // Aquí puedes implementar la navegación al dataset
-        // window.location.href = `/dataset/${datasetId}`;
-        
-        // Por ahora, mostrar alerta
-        const dataset = this.userDatasets.find(d => d._id === datasetId);
-        if (dataset) {
-            alert(`Dataset: ${dataset.nombre}\nEstado: ${dataset.estado}\nDescargas: ${dataset.descargas || 0}`);
-        }
-    }
 
     // Helper para establecer texto en elementos
     setElementText(id, text) {
