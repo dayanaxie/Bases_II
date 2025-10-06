@@ -40,3 +40,8 @@ export function requireAuth() {
   }
   return true;
 }
+
+// Obtener token para headers
+export function getAuthToken() {
+  return localStorage.getItem('token');
+}
