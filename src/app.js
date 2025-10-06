@@ -66,6 +66,10 @@ app.get("/datasetsUser/:id", (req, res) => {
   res.sendFile(path.join(__dirname, "views/dataset.html"));
 });
 
+app.get("/usersAdmin", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/users-admin.html"));
+});
+
 
 // Servir también CSS y JS de views
 // Servir CSS y JS de views

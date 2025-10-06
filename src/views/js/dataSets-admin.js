@@ -277,7 +277,7 @@ async function updateDatasetStatus(datasetId, newStatus) {
   }
 
   usersBtn.addEventListener('click', function() {
-        window.location.href = '/usersUser';
+        window.location.href = '/usersAdmin';
     });
 
   logoutBtn.addEventListener("click", logout);
