@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil</title>
+    <link rel="stylesheet" href="./css/styleguide.css">
+    <link rel="stylesheet" href="./css/profile-user.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="profile-container">
+        <div class="header-container">
+            <button class="back-button" id="back-btn" aria-label="Volver">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1>Mi Perfil</h1>
+            <button class="logout-button" id="logout-btn" aria-label="Cerrar sesión">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+
+        <!-- Sección de imagen de perfil -->
+        <div class="profile-image-section">
+            <div class="profile-image-container">
+                <img src="" alt="Foto de perfil" class="profile-image" id="profileImage" 
+                     onerror="this.style.display='none'; document.getElementById('profilePlaceholder').style.display='flex';">
+                <div class="profile-image-placeholder" id="profilePlaceholder">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+            <h2 class="profile-username" id="profile-username">@usuario</h2>
+        </div>
+
+        <!-- Navegación de pestañas -->
+        <div class="profile-tabs">
+            <button class="tab-btn active" data-tab="info">
+                <i class="fas fa-info-circle"></i> Información
+            </button>
+            <button class="tab-btn" data-tab="followers">
+                <i class="fas fa-users"></i> Seguidores
+            </button>
+            <button class="tab-btn" data-tab="datasets">
+                <i class="fas fa-database"></i> Datasets
+            </button>
+        </div>
+
+        <!-- Contenido de las pestañas -->
+        <div class="tab-content active" id="info-tab">
+            <div class="profile-info">
+                <div class="info-group">
+                    <label>Nombre de usuario:</label>
+                    <div class="info-value" id="username-value">Cargando...</div>
+                </div>
+                
+                <div class="info-group">
+                    <label>Nombre completo:</label>
+                    <div class="info-value" id="fullname-value">Cargando...</div>
+                </div>
+                
+                <div class="info-group">
+                    <label>Correo electrónico:</label>
+                    <div class="info-value" id="email-value">Cargando...</div>
+                </div>
+                
+                <div class="info-group">
+                    <label>Contraseña:</label>
+                    <div class="info-value" id="password-value">••••••••</div>
+                </div>
+                
+                <div class="info-group">
+                    <label>Fecha de nacimiento:</label>
+                    <div class="info-value" id="birthdate-value">Cargando...</div>
+                </div>
+
+                <div class="info-group">
+                    <label>Tipo de usuario:</label>
+                    <div class="info-value" id="usertype-value">Cargando...</div>
+                </div>
+            </div>
+            
+            <div class="button-container">
+                <button class="edit-button" id="edit-btn">Editar Perfil</button>
+            </div>
+        </div>
+
+        <!-- Pestaña de Seguidores -->
+        <div class="tab-content" id="followers-tab">
+            <div class="followers-section">
+                <div class="section-header">
+                    <h3>Mis Seguidores</h3>
+                    <span class="count-badge" id="followers-count">0</span>
+                </div>
+                <div class="followers-list" id="followers-list">
+                    <div class="loading">Cargando seguidores...</div>
+                </div>
+            </div>
+
+            <div class="following-section">
+                <div class="section-header">
+                    <h3>Usuarios que sigo</h3>
+                    <span class="count-badge" id="following-count">0</span>
+                </div>
+                <div class="following-list" id="following-list">
+                    <div class="loading">Cargando seguidos...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña de Datasets -->
+        <div class="tab-content" id="datasets-tab">
+            <div class="datasets-section">
+                <div class="section-header">
+                    <h3>Mis Datasets</h3>
+                    <span class="count-badge" id="datasets-count">0</span>
+                </div>
+                <div class="datasets-list" id="datasets-list">
+                    <div class="loading">Cargando datasets...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/profile-user.js"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+
+services:
+  # --------------------------
+  # MongoDB Node 1 (Primary)
+  # --------------------------
+  mongo1:
+    image: mongo:latest
+    container_name: mongo1
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1_data:/data/db
+      - ./mongo-key/mongodb-keyfile:/etc/mongo-key/mongodb-keyfile:ro
+    entrypoint: >
+      bash -c "
+        cp /etc/mongo-key/mongodb-keyfile /etc/mongodb-keyfile &&
+        chmod 600 /etc/mongodb-keyfile &&
+        chown mongodb:mongodb /etc/mongodb-keyfile &&
+        
+        # 1. Iniciar Mongo sin autenticación primero
+        mongod --replSet rs0 --bind_ip_all --fork --logpath /var/log/mongod.log &&
+        
+        # 2. Esperar a que MongoDB esté listo
+        until mongosh --eval 'print(\"MongoDB está listo\")' &>/dev/null; do
+          echo 'Esperando a MongoDB mongo1...'
+          sleep 2
+        done &&
+        
+        # 3. Inicializar replica set SOLO con mongo1 primero
+        mongosh --eval '
+          // Inicializar replica set solo con mongo1
+          rs.initiate({
+            _id: \"rs0\",
+            members: [
+              { _id: 0, host: \"mongo1:27017\", priority: 1 }
+            ]
+          });
+          
+          // Esperar a que sea primario
+          var i = 0;
+          while (i < 30 && !rs.isMaster().ismaster) {
+            sleep(1000);
+            i++;
+          }
+          
+          print(\"✅ Replica set inicializado con mongo1 como primario\");
+        ' &&
+        
+        # 4. Crear usuario admin
+        mongosh --eval '
+          db = db.getSiblingDB(\"admin\");
+          if (!db.getUser(\"root\")) {
+            db.createUser({
+              user: \"root\",
+              pwd: \"rootpass\",
+              roles: [ { role: \"root\", db: \"admin\" } ]
+            });
+            print(\"✅ Usuario root creado\");
+          } else {
+            print(\"ℹ️ Usuario root ya existe\");
+          }
+        ' &&
+        
+        # 5. Detener MongoDB
+        mongod --shutdown &&
+        
+        # 6. Iniciar MongoDB con autenticación
+        exec mongod --replSet rs0 --bind_ip_all --keyFile /etc/mongodb-keyfile --auth
+      "
+    healthcheck:
+      test: |
+        mongosh --host localhost -u root -p rootpass --authenticationDatabase admin --eval "
+        try {
+          db.adminCommand('ping');
+          print('MongoDB healthy');
+        } catch (e) {
+          print('MongoDB not healthy:', e);
+          exit(1);
+        }
+        " | grep -q "MongoDB healthy"
+      interval: 60s
+      timeout: 10s
+      retries: 10
+      start_period: 40s  
+
+  # --------------------------
+  # MongoDB Node 2 (Secondary)
+  # --------------------------
+  mongo2:
+    image: mongo:latest
+    container_name: mongo2
+    restart: always
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2_data:/data/db
+      - ./mongo-key/mongodb-keyfile:/etc/mongo-key/mongodb-keyfile:ro
+    depends_on:
+      - mongo1
+    entrypoint: >
+      bash -c "
+        cp /etc/mongo-key/mongodb-keyfile /etc/mongodb-keyfile &&
+        chmod 600 /etc/mongodb-keyfile &&
+        chown mongodb:mongodb /etc/mongodb-keyfile &&
+        
+        # 1. Iniciar sin autenticación primero para unirse al replica set
+        mongod --replSet rs0 --bind_ip_all --fork --logpath /var/log/mongod.log &&
+        
+        # 2. Esperar a que MongoDB esté listo
+        until mongosh --eval 'print(\"MongoDB mongo2 listo\")' &>/dev/null; do
+          echo 'Esperando a MongoDB mongo2...'
+          sleep 2
+        done &&
+        
+        # 3. Esperar a que mongo1 esté listo con autenticación
+        echo 'Esperando a mongo1 con autenticación...' &&
+        sleep 20 &&
+        
+        # 4. Agregar mongo2 al replica set desde mongo1 (usando mongosh en mongo1)
+        mongosh --host mongo1 -u root -p rootpass --authenticationDatabase admin --eval '
+          // Agregar mongo2 al replica set
+          rs.add({ host: \"mongo2:27017\", priority: 0.5 });
+          print(\"✅ mongo2 agregado al replica set\");
+        ' &&
+        
+        # 5. Detener MongoDB
+        mongod --shutdown &&
+        
+        # 6. Iniciar MongoDB con autenticación
+        exec mongod --replSet rs0 --bind_ip_all --keyFile /etc/mongodb-keyfile --auth
+      "
+    healthcheck:
+      test: |
+        mongosh --host localhost -u root -p rootpass --authenticationDatabase admin --eval "
+        try {
+          db.adminCommand('ping');
+          print('MongoDB healthy');
+        } catch (e) {
+          print('MongoDB not healthy:', e);
+          exit(1);
+        }
+        " | grep -q "MongoDB healthy"
+      interval: 60s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # --------------------------
+  # Redis Master (Primary)
+  # --------------------------
+  redis-master:
+    image: redis:7
+    container_name: redis-master
+    command: redis-server --appendonly yes --requirepass redispass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+
+  # --------------------------
+  # Redis Replica (Secondary)
+  # --------------------------
+  redis-replica:
+    image: redis:7
+    container_name: redis-replica
+    command: redis-server --appendonly yes --replicaof redis-master 6379 --requirepass redispass --masterauth redispass
+    ports:
+      - "6380:6379"
+    depends_on:
+      - redis-master
+    volumes:
+      - redis_replica_data:/data
+
+   # --------------------------
+  
+  # --------------------------
+  # Neo4j Clusters
+  # --------------------------
+
+  neo4j1:
+    image:  neo4j:4.4
+    container_name: neo4j1
+    hostname: neo4j1
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_server_name=neo4j1
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_server_default__advertised__address=neo4j1
+      - NEO4J_server_default__listen__address=0.0.0.0
+      - NEO4J_dbms_cluster_listen__address=0.0.0.0:5000
+      - NEO4J_dbms_cluster_advertised__address=neo4j1:5000
+      - NEO4J_dbms_cluster_discovery_endpoints=neo4j1:5000,neo4j2:5000
+      - NEO4J_initial_server_mode__constraint=CORE
+      - NEO4J_AUTH=neo4j/password123
+    volumes:
+      - neo4j1_data:/data
+
+  neo4j2:
+    image:  neo4j:4.4
+    container_name: neo4j2
+    hostname: neo4j2
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    environment:
+      - NEO4J_server_name=neo4j2
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_server_default__advertised__address=neo4j2
+      - NEO4J_server_default__listen__address=0.0.0.0
+      - NEO4J_dbms_cluster_listen__address=0.0.0.0:5000
+      - NEO4J_dbms_cluster_advertised__address=neo4j2:5000
+      - NEO4J_dbms_cluster_discovery_endpoints=neo4j1:5000,neo4j2:5000
+      - NEO4J_initial_server_mode__constraint=CORE
+      - NEO4J_AUTH=neo4j/password123
+    volumes:
+      - neo4j2_data:/data
+
+
+
+  # --------------------------
+  # Node.js App
+  # --------------------------
+  app:
+    build: .
+    container_name: node_app
+    restart: always
+    environment:
+      - MONGO_URI=mongodb://root:rootpass@mongo1:27017,mongo2:27017/appdb?replicaSet=rs0&authSource=admin
+    ports:
+      - "${PORT}:3000"
+    #depends_on:
+    #  mongo1:
+    #    condition: service_healthy
+    #  mongo2:
+    #    condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - .:/usr/src/app
+      - /app/node_modules  # Evitar sobrescribir node_modules
+
+
+volumes:
+  mongo1_data: 
+  mongo2_data:
+  redis_master_data:
+  redis_replica_data:
+  neo4j1_data:
+  neo4j2_data:
+

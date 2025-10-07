@@ -1,0 +1,194 @@
+body {
+  background-color: var(--variable-collection-fondo-0);
+  display: flex;
+  font-family: Arial, sans-serif;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+h1 {
+  color: var(--variable-collection-text-1);
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 600;
+  /* padding-left: 25px;  */
+}
+
+.container {
+  background-color: var(--variable-collection-objeto-0);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  margin-top: 2%;
+  margin-bottom: 2%;
+  max-width: 600px;
+  padding: 30px;
+  position: relative;
+}
+
+.back-arrow {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  color: var(--variable-collection-contraste);
+  font-size: 20px;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.back-arrow:hover {
+  color: var(--variable-collection-text-2)
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-container {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.left-column, .right-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.videoImage-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.video-placeholder,
+.image-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 22%;
+  border: 1px solid var(--variable-collection-contraste);
+  background-color: var(--variable-collection-objeto-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+}
+
+.image-btn, 
+.video-btn {
+  background-color: var(--variable-collection-objeto-0);
+  color: var(--variable-collection-text-1);
+  border: 1px solid var(--variable-collection-contraste);
+  border-radius: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.image-btn:hover,
+.video-btn:hover {
+  background-color: var(--variable-collection-objeto-1);
+}
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  color: var(--variable-collection-text-1);
+  margin-bottom: 8px;
+  /* font-size: 18px; */
+  font-weight: bold;
+}
+
+textarea,
+input {
+  padding: 12px 15px;  
+  border: 1px solid var(--variable-collection-contraste);
+  border-radius: 10px;
+  font-size: 16px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  background-color: var(--variable-collection-fondo-0);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--variable-collection-text-2);
+  box-shadow: 0 0 0 2px var(--variable-collection-contraste);
+}
+
+.submit-container {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.submit-btn {
+  background-color: var(--variable-collection-contraste);
+  color: var(--variable-collection-text-2);
+  border: none;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 142px;  
+  margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: var(--variable-collection-text-2);
+    color: var(--variable-collection-contraste);
+    border: 1px solid var(--variable-collection-contraste);
+}
+
+/* Estilo para el contenedor del input de archivos */
+.file-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Ocultar el input de tipo file */
+#files {
+  display: none;
+}
+
+/* Estilo para el botón de subir archivos */
+.file-upload-btn {
+  background-color: var(--variable-collection-objeto-1);
+  color: var(--variable-collection-contraste);
+  border: 1px solid var(--variable-collection-contraste);
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.file-upload-btn:hover {
+  background-color: var(--variable-collection-objeto-0);
+}
+
+/* Estilo para el texto que muestra los archivos seleccionados */
+.file-upload-text {
+  font-size: 12px;
+  font-weight: bold;
+  color: #555;
+  font-style: italic;
+}
