@@ -119,12 +119,12 @@ router.post('/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales inválidas'
+        message: 'Usuario no encontrado'
       });
     }
 
     // Verificar contraseña
-    const isPasswordValid = await userRepo.verifyPassword(user, password);
+    const isPasswordValid = await userRepo.verifyUserPassword(email, password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -485,7 +485,7 @@ router.get('/followers/:userId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo seguidores:', error);
+    console.error('Error obteniendo seguidores:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -507,7 +507,7 @@ router.get('/following/:userId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo seguidos:', error);
+    console.error('Error obteniendo seguidos:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

@@ -10,6 +10,7 @@ import {
     createUserReferenceInNeo4j 
 } from '../config/neo4j.js';
 import DatasetRepository from './dataset-repository.js';
+import mongoose from 'mongoose';
 
 class UserRepository extends BaseRepository {
     constructor(mongoClient, neo4jDriver) {
@@ -33,6 +34,14 @@ class UserRepository extends BaseRepository {
         return await this.cachedOperation(cacheKey, async () => {
             return await UserQueries.findByEmail(email);
         }, 600);
+    }
+
+    async getUserByUsername(username) {
+        const cacheKey = `user:username:${username}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await UserQueries.findByUsername(username);
+        }, 600); // 10 minutes TTL
     }
 
     async getAllUsers(excludeId = null) {
@@ -201,6 +210,27 @@ class UserRepository extends BaseRepository {
         
         console.log('Follow relationship removed and cache invalidated');
         return result;
+    }
+
+    async verifyUserPassword(email, password) {
+        // Get user by email without cache to ensure we have latest data
+        const User = mongoose.model('User');
+        const user = await User.findByEmail(email);
+        
+        if (!user) {
+            return false;
+        }
+        
+        // Use the model's verifyPassword method
+        const isValid = await user.verifyPassword(password);
+        
+        // Invalidate cache to ensure fresh data
+        if (isValid) {
+            await this.invalidateCache(this.generateUserKey(user._id));
+            await this.invalidateCache(`user:email:${email}`);
+        }
+        
+        return isValid;
     }
 
     async verifyPassword(user, password) {

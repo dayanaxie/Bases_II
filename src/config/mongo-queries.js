@@ -10,6 +10,11 @@ export const UserQueries = {
     return await User.findById(userId).select('-password -salt');
   },
 
+  // Find user by ID including password (for verification)
+  findByIdWithPassword: async (userId) => {
+    return await User.findById(userId);
+  },
+
   // Find user by email
   findByEmail: async (email) => {
     return await User.findByEmail(email);
@@ -39,10 +44,14 @@ export const UserQueries = {
       tipoUsuario: { $ne: 'admin' }
     }, 'username nombreCompleto foto').limit(limit);
   },
-
-  // Create user
+    // Create user
   create: async (userData) => {
+    const User = mongoose.model('User');
     const user = new User(userData);
+    
+    // Encrypt password before saving
+    await user.encryptPassword(userData.password);
+    
     return await user.save();
   },
 
