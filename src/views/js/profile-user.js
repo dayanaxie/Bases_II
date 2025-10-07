@@ -6,7 +6,12 @@ class ProfileUser {
         this.followers = [];
         this.following = [];
         this.datasets = [];
+        this.isEditing = false;
+        this.selectedFile = null;
         this.init();
+        
+        window.viewDataset = (datasetId) => this.viewDataset(datasetId);
+
     }
 
     async init() {
@@ -35,11 +40,41 @@ class ProfileUser {
         backBtn.addEventListener('click', () => window.history.back());
         logoutBtn.addEventListener('click', logout);
         editBtn.addEventListener('click', () => {
-            alert('Funcionalidad de edición en desarrollo');
+            if (this.isEditing) {
+                this.saveChanges();
+            } else {
+                this.toggleEditMode();
+            }
         });
 
         // Pestañas
         this.setupTabs();
+        
+        // Configurar el input de imagen de perfil
+        this.setupImageUpload();
+    }
+
+    setupImageUpload() {
+        const profileImageContainer = document.querySelector('.profile-image-container');
+        const avatarInput = document.createElement('input');
+        avatarInput.type = 'file';
+        avatarInput.accept = 'image/*';
+        avatarInput.style.display = 'none';
+        avatarInput.id = 'avatar-input';
+        document.body.appendChild(avatarInput);
+
+        // Hacer la imagen de perfil clickeable en modo edición
+        profileImageContainer.addEventListener('click', () => {
+            if (this.isEditing) {
+                avatarInput.click();
+            }
+        });
+
+        avatarInput.addEventListener('change', (event) => {
+            if (this.isEditing) {
+                this.handleImageUpload(event);
+            }
+        });
     }
 
     setupTabs() {
@@ -52,7 +87,206 @@ class ProfileUser {
         });
     }
 
+    toggleEditMode() {
+        this.isEditing = !this.isEditing;
+        
+        if (this.isEditing) {
+            this.enterEditMode();
+        } else {
+            this.exitEditMode();
+        }
+    }
+
+    enterEditMode() {
+        // Cambiar texto del botón
+        document.getElementById('edit-btn').textContent = 'Guardar Cambios';
+        
+        // Hacer campos editables
+        this.makeFieldsEditable();
+        
+        // Agregar indicador visual de edición
+        document.querySelector('.profile-image-container').classList.add('editable');
+        
+        console.log('Modo edición activado');
+    }
+
+    exitEditMode() {
+        // Cambiar texto del botón
+        document.getElementById('edit-btn').textContent = 'Editar Perfil';
+        
+        // Quitar indicador visual de edición
+        document.querySelector('.profile-image-container').classList.remove('editable');
+        
+        console.log('Modo edición desactivado');
+    }
+
+    makeFieldsEditable() {
+        const editableFields = ['username', 'fullname', 'email', 'birthdate'];
+        
+        editableFields.forEach(field => {
+            const element = document.getElementById(`${field}-value`);
+            const currentValue = element.textContent;
+            
+            if (field === 'birthdate') {
+                // Para fecha, crear input type date
+                const input = document.createElement('input');
+                input.type = 'date';
+                input.value = this.formatDateForInput(currentValue);
+                input.className = 'edit-input';
+                element.innerHTML = '';
+                element.appendChild(input);
+            } else if (field === 'email') {
+                // Para email, crear input type email
+                const input = document.createElement('input');
+                input.type = 'email';
+                input.value = currentValue;
+                input.className = 'edit-input';
+                element.innerHTML = '';
+                element.appendChild(input);
+            } else {
+                // Para otros campos, input type text
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentValue;
+                input.className = 'edit-input';
+                element.innerHTML = '';
+                element.appendChild(input);
+            }
+        });
+    }
+
+    async saveChanges() {
+        try {
+            // Recopilar datos del formulario
+            const formData = new FormData();
+            
+            // Agregar campos editables
+            const username = document.querySelector('#username-value input')?.value;
+            const fullname = document.querySelector('#fullname-value input')?.value;
+            const email = document.querySelector('#email-value input')?.value;
+            const birthdate = document.querySelector('#birthdate-value input')?.value;
+
+            if (username) formData.append('username', username);
+            if (fullname) formData.append('nombreCompleto', fullname);
+            if (email) formData.append('correoElectronico', email);
+            if (birthdate) formData.append('fechaNacimiento', birthdate);
+            console.log("Datos a enviar:", { username, fullname, email, birthdate });
+
+            if (this.selectedFile) {
+                console.log("Archivo de imagen seleccionado:", this.selectedFile.name);
+                formData.append('foto', this.selectedFile);
+            }
+
+
+
+            const token = localStorage.getItem('token');
+            
+            const response = await fetch(`http://localhost:3000/api/users/${this.currentUser._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al actualizar el perfil');
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Actualizar usuario en localStorage
+                if (result.user) {
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    this.currentUser = result.user;
+                }
+                
+                // Recargar perfil
+                await this.loadUserProfile(this.currentUser._id);
+                
+                // Salir del modo edición
+                this.isEditing = false;
+                this.exitEditMode();
+                
+                this.showSuccessMessage('Perfil actualizado correctamente');
+            } else {
+                throw new Error(result.message || 'Error al actualizar el perfil');
+            }
+
+        } catch (error) {
+            console.error('Error guardando cambios:', error);
+            this.showErrorMessage('Error al guardar los cambios: ' + error.message);
+        }
+    }
+
+    async handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            this.showErrorMessage('Por favor selecciona un archivo de imagen válido');
+            return;
+        }
+
+        // Validar tamaño (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            this.showErrorMessage('La imagen debe ser menor a 5MB');
+            return;
+        }
+
+        this.selectedFile = file;
+
+        // Mostrar vista previa inmediata
+        this.showImagePreview(file);
+
+        // Notificar que hay cambios pendientes
+        this.showInfoMessage('Imagen seleccionada. Guarda los cambios para aplicar.');
+
+        console.log('Archivo almacenado temporalmente:', this.selectedFile.name);
+
+
+        
+    }
+
+    showImagePreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const profileImage = document.getElementById('profileImage');
+            const profilePlaceholder = document.getElementById('profilePlaceholder');
+            
+            profileImage.src = e.target.result;
+            profileImage.style.display = 'block';
+            profilePlaceholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    formatDateForInput(dateString) {
+        if (!dateString || dateString === 'No disponible') return '';
+        
+        try {
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        } catch (error) {
+            return '';
+        }
+    }
+
     switchTab(tabName) {
+        // Si estamos en modo edición, guardar cambios antes de cambiar de pestaña
+        if (this.isEditing) {
+            if (confirm('Tienes cambios sin guardar. ¿Quieres guardarlos antes de cambiar de pestaña?')) {
+                this.saveChanges();
+            } else {
+                this.isEditing = false;
+                this.exitEditMode();
+                // Recargar datos originales
+                this.loadUserProfile(this.currentUser._id);
+            }
+        }
+
         // Actualizar botones activos
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
@@ -313,7 +547,7 @@ class ProfileUser {
             `;
         } else {
             datasetsList.innerHTML = datasets.map(dataset => `
-                <div class="dataset-item" onclick="profileUser.viewDataset('${dataset._id}')">
+                <div class="dataset-item" onclick="viewDataset('${dataset._id}')">
                     <div class="dataset-info">
                         <h4>${dataset.nombre || 'Sin nombre'}</h4>
                         <div class="dataset-meta">
@@ -404,30 +638,68 @@ class ProfileUser {
 
     viewDataset(datasetId) {
         console.log('Ver dataset:', datasetId);
-        // Aquí puedes implementar la navegación al dataset
-        alert(`Ver dataset: ${datasetId}`);
+        window.location.href = `/datasetsUser/${datasetId}`;
+    }
+
+    // Función para mostrar mensaje de éxito
+    showSuccessMessage(message) {
+        this.showMessage(message, 'success');
+    }
+
+    // Función para mostrar mensaje de información
+    showInfoMessage(message) {
+        this.showMessage(message, 'info');
     }
 
     // Función para mostrar mensaje de error
     showErrorMessage(message) {
-        console.error(message);
+        this.showMessage(message, 'error');
+    }
+
+    showMessage(message, type = 'info') {
+        console.log(message);
         const alertDiv = document.createElement('div');
+        
+        const styles = {
+            success: {
+                background: '#d4edda',
+                color: '#155724',
+                border: '1px solid #c3e6cb'
+            },
+            error: {
+                background: '#f8d7da',
+                color: '#721c24',
+                border: '1px solid #f5c6cb'
+            },
+            info: {
+                background: '#d1ecf1',
+                color: '#0c5460',
+                border: '1px solid #bee5eb'
+            }
+        };
+
+        const style = styles[type] || styles.info;
+        
         alertDiv.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #f8d7da;
-            color: #721c24;
             padding: 1rem;
             border-radius: 5px;
-            border: 1px solid #f5c6cb;
             z-index: 1000;
+            font-weight: bold;
+            background: ${style.background};
+            color: ${style.color};
+            border: ${style.border};
         `;
+        
         alertDiv.textContent = message;
         document.body.appendChild(alertDiv);
         
         setTimeout(() => {
-            document.body.removeChild(alertDiv);
+            if (document.body.contains(alertDiv)) {
+                document.body.removeChild(alertDiv);
+            }
         }, 5000);
     }
 }

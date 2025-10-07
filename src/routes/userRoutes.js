@@ -345,8 +345,7 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
       username,
       nombreCompleto,
       correoElectronico,
-      fechaNacimiento,
-      tipoUsuario
+      fechaNacimiento
     } = req.body;
 
     // Buscar usuario
@@ -396,7 +395,6 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
     if (nombreCompleto) updateData.nombreCompleto = nombreCompleto;
     if (correoElectronico) updateData.correoElectronico = correoElectronico.toLowerCase();
     if (fechaNacimiento) updateData.fechaNacimiento = fechaNacimiento;
-    if (tipoUsuario) updateData.tipoUsuario = tipoUsuario;
     
     // Actualizar foto si se proporciona
     if (req.file) {
