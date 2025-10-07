@@ -19,6 +19,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const logoutBtn = document.getElementById('logout-btn');
     const datasetsBtn = document.getElementById('datasets-btn');
     const profileBtn = document.getElementById('profile-btn');
+    const messagesBtn = document.getElementById('messages-btn');
+
+    // Event listener para ir a mensajes
+    if (messagesBtn) {
+        messagesBtn.addEventListener('click', function() {
+            window.location.href = '/messages-users';
+        });
+    }
 
     // Event listener para logout
     if (logoutBtn) {

@@ -20,6 +20,9 @@ const __dirname = path.dirname(__filename);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Aplica el middleware a las rutas de mensajes
+app.use("/api/users/messages", requireAuth, userRoutes);
+
 // Conexión a Mongo
 connectMongo();
 
@@ -72,6 +75,10 @@ app.get("/usersUser", (req, res) => {
 
 app.get("/profile-user", (req, res) => {
   res.sendFile(path.join(__dirname, "views/profile-user.html"));
+});
+
+app.get("/messages-users", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/messages-users.html"));
 });
 
 // Servir también CSS y JS de views

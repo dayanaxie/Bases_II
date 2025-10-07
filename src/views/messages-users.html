@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mensajes - DataSets</title>
+  <link rel="stylesheet" href="./css/styleguide.css">
+  <link rel="stylesheet" href="./css/messages-users.css">
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+        <button class="back-btn" id="back-btn">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Mensajes</h1>
+        <div>
+            <button class="users-btn"><i class="fa-solid fa-bell"></i></button>
+            <button class="users-btn" id="datasets-btn">
+                <i class="fa-solid fa-database"></i>
+            </button>
+            <button class="users-btn" id="users-btn">
+                <i class="fa-solid fa-users"></i>
+            </button>
+            <button class="users-btn" id="profile-btn"><i class="fa-solid fa-user"></i></button>
+        </div>
+    </header>
+
+    <!-- Users List -->
+    <div class="users-list">
+      <div class="search-bar">
+        <input type="text" id="search-users" placeholder="Buscar usuarios...">
+        <button class="filter-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+      </div>
+      <div id="users-container" class="users-container"></div>
+    </div>
+
+    <!-- Chat Container -->
+    <div id="chat-container" class="chat-container hidden">
+      <div class="chat-header">
+        <button class="back-to-list" id="back-to-list">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <div class="chat-user-info">
+          <img src="" alt="" class="user-avatar" id="chat-user-avatar">
+          <span id="chat-user-name"></span>
+        </div>
+      </div>
+
+      <div id="messages-container" class="messages-container">
+        <!-- Messages will be loaded here -->
+      </div>
+
+      <div class="message-input-container">
+        <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+        <button id="send-message" class="send-btn">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script type="module" src="./js/messages-users.js"></script>
+</body>
+</html>

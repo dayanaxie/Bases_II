@@ -6,8 +6,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     const logoutBtn = document.getElementById('logout-btn');
     const usersBtn = document.getElementById('users-btn');
-    
+    const messagesBtn = document.getElementById('messages-btn');
+        
     const userData = getCurrentUser();
+
+    if (messagesBtn) {
+        messagesBtn.addEventListener('click', function() {
+            window.location.href = '/messages-users';
+        });
+    }
     
     if (userData.tipoUsuario === 'admin') {
         window.location.href = '/datasetsAdmin';

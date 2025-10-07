@@ -572,4 +572,133 @@ router.get('/search/:query', async (req, res) => {
   }
 });
 
+
+// Obtener todos los usuarios para mensajes (excluyendo al usuario actual)
+router.get('/messages/users', async (req, res) => {
+  try {
+    const { exclude } = req.query; // ID del usuario actual a excluir
+    
+    let filter = { tipoUsuario: { $ne: 'admin' } };
+    if (exclude) {
+      filter._id = { $ne: exclude };
+    }
+
+    const users = await User.find(filter, 'username nombreCompleto foto correoElectronico')
+      .sort({ nombreCompleto: 1 });
+
+    res.json({
+      success: true,
+      users: users
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo usuarios para mensajes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+});
+
+// Endpoint temporal para simular mensajes (deberías crear un modelo Message después)
+router.get('/messages/conversation/:otherUserId', async (req, res) => {
+  try {
+    const { otherUserId } = req.params;
+    const { currentUserId } = req.query;
+
+    // Simular mensajes (en producción usarías un modelo Message)
+    const mockMessages = [
+      {
+        _id: '1',
+        content: '¡Hola! ¿Cómo estás?',
+        sender: currentUserId,
+        receiver: otherUserId,
+        timestamp: new Date(Date.now() - 3600000),
+        read: true
+      },
+      {
+        _id: '2',
+        content: '¡Hola! Estoy bien, gracias. ¿Y tú?',
+        sender: otherUserId,
+        receiver: currentUserId,
+        timestamp: new Date(Date.now() - 1800000),
+        read: true
+      },
+      {
+        _id: '3',
+        content: 'Todo bien por aquí, trabajando en el proyecto.',
+        sender: currentUserId,
+        receiver: otherUserId,
+        timestamp: new Date(),
+        read: false
+      }
+    ];
+
+    res.json({
+      success: true,
+      messages: mockMessages
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo mensajes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+});
+ 
+// Ruta temporal para enviar mensajes
+router.post('/messages/send', async (req, res) => {
+    try {
+        const { content, sender, receiver } = req.body;
+
+        // Por ahora, solo simulamos el envío
+        // En una implementación real, guardarías en la base de datos
+        const mockMessage = {
+            _id: Date.now().toString(),
+            content,
+            sender,
+            receiver,
+            timestamp: new Date(),
+            read: false
+        };
+
+        res.json({
+            success: true,
+            message: mockMessage
+        });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al enviar el mensaje'
+        });
+    }
+});
+
+// Ruta temporal para obtener conversaciones (sin mensajes reales aún)
+router.get('/messages/conversation/:otherUserId', async (req, res) => {
+    try {
+        const { otherUserId } = req.params;
+        const { currentUserId } = req.query;
+
+        // Por ahora, retornamos un array vacío de mensajes
+        // Esto permitirá que el frontend cargue la interfaz de chat
+        res.json({
+            success: true,
+            messages: [],
+            conversationId: `${currentUserId}_${otherUserId}`
+        });
+    } catch (error) {
+        console.error('Error loading conversation:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al cargar la conversación'
+        });
+    }
+});
+
+
+
 export default router;
