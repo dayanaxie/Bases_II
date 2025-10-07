@@ -1,6 +1,6 @@
 // dataset-repository.js
 import BaseRepository from './base-repository.js';
-import { DatasetQueries } from './mongo-queries.js';
+import { DatasetQueries } from '../config/mongo-queries.js';
 import { 
   createDatasetReferenceInNeo4j,
   isUserFollowingDataset,

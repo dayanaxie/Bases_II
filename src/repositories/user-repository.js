@@ -1,6 +1,6 @@
 // user-repository.js
 import BaseRepository from './base-repository.js';
-import { UserQueries } from './mongo-queries.js';
+import { UserQueries } from '../config/mongo-queries.js';
 import { 
     followUser, 
     unfollowUser, 
@@ -9,7 +9,7 @@ import {
     getFollowing,
     createUserReferenceInNeo4j 
 } from '../config/neo4j.js';
-import { getUserDatasets } from './dataset-repository.js';
+import DatasetRepository from './dataset-repository.js';
 
 class UserRepository extends BaseRepository {
     constructor(mongoClient, neo4jDriver) {
@@ -100,6 +100,8 @@ class UserRepository extends BaseRepository {
     }
 
     async getUserDatasets(userId) {
+        const datasetRepo = new DatasetRepository(mongoose);
+
         const cacheKey = `user:datasets:${userId}`;
         
         return await this.cachedOperation(cacheKey, async () => {

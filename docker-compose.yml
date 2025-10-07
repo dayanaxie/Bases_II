@@ -233,11 +233,15 @@ services:
       - MONGO_URI=mongodb://root:rootpass@mongo1:27017,mongo2:27017/appdb?replicaSet=rs0&authSource=admin
     ports:
       - "${PORT}:3000"
-    #depends_on:
-    #  mongo1:
-    #    condition: service_healthy
-    #  mongo2:
-    #    condition: service_healthy
+    depends_on:
+      #mongo1:
+      #  condition: service_healthy
+      #mongo2:
+      #  condition: service_healthy
+      redis-master:
+        condition: service_started
+      redis-replica:
+        condition: service_started
     env_file:
       - .env
     volumes:
