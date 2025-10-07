@@ -156,10 +156,34 @@ p {
   color: #333;
 }
 
+/* Versión minimalista */
+.role-dropdown {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+    cursor: pointer;
+    margin-right: 12px;
+    min-width: 140px;
+    transition: all 0.2s ease;
+}
 
+.role-dropdown:hover {
+    border-color: #007bff;
+    background: #f7fafc;
+}
 
+.role-dropdown:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
 
-
-
-
-
+.role-dropdown:disabled {
+    background: #f7fafc;
+    color: #a0aec0;
+    cursor: not-allowed;
+}

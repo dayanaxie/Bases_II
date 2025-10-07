@@ -1,13 +1,10 @@
-import { followUser, unfollowUser, isFollowing } from './neo4j-frontend.js';
 
 class UserModal {
     constructor() {
         this.modalOverlay = document.getElementById('modal-overlay');
         this.modalClose = document.getElementById('modal-close');
-        this.followBtn = document.getElementById('follow-btn');
         this.userData = null;
         this.userDatasets = [];
-        this.currentUser = null;
 
         window.viewDataset = (datasetId) => this.viewDataset(datasetId);
         
@@ -38,18 +35,12 @@ class UserModal {
             }
         });
 
-        // Botón seguir
-        if (this.followBtn) {
-            this.followBtn.addEventListener('click', () => {
-                this.handleFollow();
-            });
-        }
 
-        // Tabs - CORREGIDO
+        // Tabs
         this.setupTabs();
     }
 
-    // Configurar sistema de pestañas - CORREGIDO
+    // Configurar sistema de pestañas
     setupTabs() {
         const tabBtns = document.querySelectorAll('.tab-btn');
         tabBtns.forEach(btn => {
@@ -60,40 +51,19 @@ class UserModal {
         });
     }
 
-    // Cambiar entre pestañas - CORREGIDO
+    // Cambiar entre pestañas
     switchTab(tabName) {
-        console.log('Cambiando a pestaña:', tabName); // Debug
-        
         // Actualizar botones activos
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        
-        const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
         // Actualizar contenido activo
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        
-        const activeContent = document.getElementById(`${tabName}-tab`);
-        if (activeContent) {
-            activeContent.classList.add('active');
-        }
-    }
-
-    // Obtener usuario actual desde localStorage
-    getCurrentUser() {
-        try {
-            const userData = localStorage.getItem('user');
-            return userData ? JSON.parse(userData) : null;
-        } catch (error) {
-            console.error('Error obteniendo usuario actual:', error);
-            return null;
-        }
+        document.getElementById(`${tabName}-tab`).classList.add('active');
     }
 
     // Mostrar modal con datos del usuario
@@ -104,11 +74,6 @@ class UserModal {
         }
         
         this.userData = userData;
-        this.currentUser = this.getCurrentUser();
-        
-        // Verificar estado de seguimiento
-        await this.checkFollowStatus();
-        
         this.populateUserData(userData);
         
         // Cargar datasets del usuario
@@ -118,77 +83,6 @@ class UserModal {
         setTimeout(() => {
             this.modalOverlay.classList.add('active');
         }, 10);
-    }
-
-    // Verificar si el usuario actual sigue al usuario del modal
-    async checkFollowStatus() {
-        if (!this.currentUser || !this.userData) {
-            this.updateFollowButton(false);
-            return;
-        }
-
-        try {
-            const following = await isFollowing(this.currentUser._id, this.userData._id);
-            this.updateFollowButton(following);
-        } catch (error) {
-            console.error('Error verificando estado de seguimiento:', error);
-            this.updateFollowButton(false);
-        }
-    }
-
-    // Actualizar estado del botón seguir
-    updateFollowButton(isFollowing) {
-        if (!this.followBtn) return;
-
-        if (isFollowing) {
-            this.followBtn.innerHTML = '<i class="fa-solid fa-check"></i> Siguiendo';
-            this.followBtn.classList.add('following');
-        } else {
-            this.followBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Seguir';
-            this.followBtn.classList.remove('following');
-        }
-        
-        this.followBtn.disabled = false;
-    }
-
-    // Manejar funcionalidad de seguir/dejar de seguir
-    async handleFollow() {
-        if (!this.userData || !this.currentUser || !this.followBtn) return;
-        
-        const followBtn = this.followBtn;
-        const isCurrentlyFollowing = followBtn.classList.contains('following');
-        
-        // Cambiar estado del botón inmediatamente
-        followBtn.disabled = true;
-        
-        if (isCurrentlyFollowing) {
-            // Dejar de seguir
-            followBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dejando de seguir...';
-        } else {
-            // Seguir
-            followBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siguiendo...';
-        }
-        
-        try {
-            if (isCurrentlyFollowing) {
-                // Dejar de seguir
-                await unfollowUser(this.currentUser._id, this.userData._id);
-                this.updateFollowButton(false);
-                console.log(`Dejó de seguir al usuario: ${this.userData.username}`);
-            } else {
-                // Seguir
-                await followUser(this.currentUser._id, this.userData._id);
-                this.updateFollowButton(true);
-                console.log(`Siguiendo al usuario: ${this.userData.username}`);
-            }
-        } catch (error) {
-            console.error('Error en operación de seguir:', error);
-            // Revertir al estado anterior en caso de error
-            this.updateFollowButton(isCurrentlyFollowing);
-            
-            // Mostrar mensaje de error
-            alert('Error al procesar la operación. Intenta nuevamente.');
-        }
     }
 
     // Cargar datasets del usuario
@@ -274,18 +168,6 @@ class UserModal {
         this.setElementText('user-datasets-count', this.userDatasets.length);
     }
 
-    // Ver dataset (placeholder)
-    viewDataset(datasetId) {
-        console.log('Ver dataset:', datasetId);
-        // Aquí puedes implementar la navegación al dataset
-        // window.location.href = `/dataset/${datasetId}`;
-        
-        // Por ahora, mostrar alerta
-        const dataset = this.userDatasets.find(d => d._id === datasetId);
-        if (dataset) {
-            alert(`Dataset: ${dataset.nombre}\nEstado: ${dataset.estado}\nDescargas: ${dataset.descargas || 0}`);
-        }
-    }
 
     // Helper para establecer texto en elementos
     setElementText(id, text) {
@@ -301,13 +183,20 @@ class UserModal {
         if (!avatarContainer) return;
         
         if (user.foto && user.foto !== 'null' && user.foto !== 'undefined') {
+            // Limpiar container
             avatarContainer.innerHTML = '';
+            
+            // Crear imagen
             const img = document.createElement('img');
             img.src = `http://localhost:3000${user.foto}`;
             img.alt = user.nombreCompleto || user.username;
+            
+            // Manejar error de carga
             img.onerror = () => {
+                console.warn('Error cargando imagen del usuario:', user.foto);
                 this.showAvatarPlaceholder(avatarContainer);
             };
+            
             avatarContainer.appendChild(img);
         } else {
             this.showAvatarPlaceholder(avatarContainer);
@@ -319,6 +208,7 @@ class UserModal {
         container.innerHTML = '<i class="fa-solid fa-user" id="avatar-placeholder"></i>';
     }
 
+
     // Cerrar modal
     close() {
         if (!this.modalOverlay) return;
@@ -327,13 +217,13 @@ class UserModal {
         setTimeout(() => {
             this.userData = null;
             this.userDatasets = [];
-            this.currentUser = null;
         }, 300);
     }
 
     // Utilidades
     formatDate(dateString) {
         if (!dateString) return 'No especificada';
+        
         const date = new Date(dateString);
         return date.toLocaleDateString('es-ES', {
             year: 'numeric',
@@ -344,13 +234,16 @@ class UserModal {
 
     calculateAge(dateString) {
         if (!dateString) return '--';
+        
         const birthDate = new Date(dateString);
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
+        
         const monthDiff = today.getMonth() - birthDate.getMonth();
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
             age--;
         }
+        
         return age;
     }
 }
