@@ -1,8 +1,13 @@
+// datasetRoutes.js
 import express from "express";
-import Dataset from "../models/Dataset.js";
 import { uploadDataset } from "../config/multer.js";
+import DatasetRepository from '../repositories/dataset-repository.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
+
+// Initialize repository
+const datasetRepo = new DatasetRepository(mongoose);
 
 // Crear dataset con múltiples archivos
 router.post("/", uploadDataset.fields([
@@ -14,22 +19,13 @@ router.post("/", uploadDataset.fields([
     console.log("Archivos recibidos para dataset:", req.files);
     console.log("Datos recibidos:", req.body);
 
-    const { nombre, descripcion } = req.body;
+    const { nombre, descripcion, creadorId } = req.body;
 
     // Validaciones
-    if (!nombre || !descripcion) {
+    if (!nombre || !descripcion || !creadorId) {
       return res.status(400).json({ 
         success: false,
-        error: "Nombre y descripción son obligatorios" 
-      });
-    }
-
-    const creadorId = req.body.creadorId;
-    
-    if (!creadorId) {
-      return res.status(400).json({
-        success: false,
-        error: "ID de usuario creador es requerido"
+        error: "Nombre, descripción y creadorId son obligatorios" 
       });
     }
 
@@ -38,7 +34,7 @@ router.post("/", uploadDataset.fields([
     const video_guia = req.files['video_guia'] ? req.files['video_guia'][0] : null;
     const archivos = req.files['archivos'] ? req.files['archivos'] : [];
 
-    // Calcular tamaño total en bytes
+    // Calcular tamaño total
     let tamanoTotal = 0;
     if (foto) tamanoTotal += foto.size;
     if (video_guia) tamanoTotal += video_guia.size;
@@ -49,21 +45,21 @@ router.post("/", uploadDataset.fields([
     // Convertir a MB con dos decimales
     tamanoTotal = Number((tamanoTotal / (1024 * 1024)).toFixed(2));
 
-
-    const dataset = new Dataset({
-      nombre: nombre,
-      descripcion: descripcion,
+    // Preparar datos del dataset
+    const datasetData = {
+      nombre,
+      descripcion,
       foto: foto ? `/uploads/dataset-images/${foto.filename}` : null,
       video_guia: video_guia ? `/uploads/dataset-videos/${video_guia.filename}` : null,
       archivos: archivos.map(archivo => `/uploads/dataset-files/${archivo.filename}`),
-      estado: "pendiente", 
-      tamano: tamanoTotal, // En bytes
-      descargas: 0, // Inicializar en 0
-      creadorId: creadorId
+      estado: "pendiente",
+      tamano: tamanoTotal,
+      descargas: 0,
+      creadorId
+    };
 
-    });
-
-    await dataset.save();
+    // Crear dataset usando repository
+    const dataset = await datasetRepo.createDataset(datasetData);
     
     res.status(201).json({
       success: true,
@@ -84,9 +80,8 @@ router.post("/", uploadDataset.fields([
 // Listar todos los datasets
 router.get("/", async (req, res) => {
   try {
-    const datasets = await Dataset.find()
-    .populate('creadorId', 'username nombreCompleto')
-    .sort({ fecha_inclusion: -1 });
+    const datasets = await datasetRepo.getAllDatasets();
+    
     res.json({
       success: true,
       datasets: datasets
@@ -102,9 +97,7 @@ router.get("/", async (req, res) => {
 // Listar todos los datasets aprobados
 router.get("/aprobados", async (req, res) => {
   try {
-    const datasets = await Dataset.find({ estado: "aprobado" })
-      .populate('creadorId', 'username nombreCompleto')
-      .sort({ fecha_inclusion: -1 });
+    const datasets = await datasetRepo.getApprovedDatasets();
     
     res.json({
       success: true,
@@ -122,7 +115,7 @@ router.get("/aprobados", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const dataset = await Dataset.findById(datasetId).populate('creadorId');
+    const dataset = await datasetRepo.getDatasetById(datasetId);
     
     if (!dataset) {
       return res.status(404).json({ error: 'Dataset no encontrado' });
@@ -159,11 +152,8 @@ router.put("/:id", uploadDataset.fields([
       }
     }
 
-    const dataset = await Dataset.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    // Actualizar dataset usando repository
+    const dataset = await datasetRepo.updateDataset(req.params.id, updateData);
 
     if (!dataset) {
       return res.status(404).json({
@@ -190,11 +180,7 @@ router.post('/:id/download', async (req, res) => {
     try {
         const datasetId = req.params.id;
         
-        const dataset = await Dataset.findByIdAndUpdate(
-            datasetId,
-            { $inc: { descargas: 1 } }, 
-            { new: true } 
-        );
+        const dataset = await datasetRepo.incrementDownloads(datasetId);
 
         if (!dataset) {
             return res.status(404).json({ error: 'Dataset no encontrado' });
@@ -223,11 +209,7 @@ router.patch("/:id/estado", async (req, res) => {
       });
     }
 
-    const dataset = await Dataset.findByIdAndUpdate(
-      req.params.id,
-      { estado: estado },
-      { new: true }
-    );
+    const dataset = await datasetRepo.updateDatasetState(req.params.id, estado);
 
     if (!dataset) {
       return res.status(404).json({
@@ -248,6 +230,5 @@ router.patch("/:id/estado", async (req, res) => {
     });
   }
 });
-
 
 export default router;

@@ -10,12 +10,12 @@ const connectMongo = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
-    console.log("✅ Conectado a MongoDB");
+    console.log("Conectado a MongoDB");
 
     await initAdmin();
 
   } catch (error) {
-    console.error("❌ Error al conectar a MongoDB:", error);
+    console.error("Error al conectar a MongoDB:", error);
     process.exit(1);
   }
 };
