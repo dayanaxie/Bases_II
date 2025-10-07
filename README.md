@@ -30,11 +30,24 @@ Use `docker-compose up -d` inside the main folder (`BASES_II`) to start the proj
 ### Node JS Dependencies
 #### Nodemon
 This dependency helps us automatically restart the node container whenever a change is detected in one of the files.
-## Databases used
 
-### Mongo
-### Neo4j
+## Databases used
+For this project, we decided to use three separate databases to store the data needed to fulfill the project's requirements. Here will be a diagram showing the interaction between the different databases and the web application.
+![Sequence Diagram](./documentation/diagrama_secuencia.svg)
+
+### Document Database
+We decided to use a document database to store general user and dataset information, for this we used MongoDB. The Mongo Database we designed contains two main entities; Usuario contains the information needed for user authentication like username, email, password and hash and the information to be displayed on the user's profile, Dataset contains general information for the dataset as well as the download data and usuario_creador.
+![Mongo Database Diagram](./documentation/diagrama_mongo.svg)
+---
+
+### Graph Database
+In order to represent following, votes and creation relationships, we decided to use a graph database, for this we picked Neo4j. The Neo4j database contains two nodes; Usuario and Dataset. Here we represented following and messaging as a relation `User -> User`, the voting, creation and comment relationships are represented as a `User -> Dataset` relation.
+![Mongo Database Diagram](./documentation/diagrama_neo4j_v2.svg)
+---
+
 ### Redis
+To store user sessions and cache, we instead used an in-memmory database, this helps us with fast queries without the need for persistency, for this we used Redis. The Redis Database is used for two purposes; User sessions and Caching. For user sessions we use a key like `session:{userId}` and we store userId, a secure token and its last access, it has a time-to-live of 3600 seconds (1 hour). For query caching we use a key like `cache:query:{query_hash}` and we store the output of the query serialized as a JSON, it has a time to live of 300 seconds (5 minutes).
+![Mongo Database Diagram](./documentation/diagrama_redis.svg)
 
 #### Initialization
 For this Redis DB we are using a master node and a replica. All writes are handled by the master and all reads by the replica. For that we are using the following section of our `docker-compose.yml`.
@@ -65,5 +78,8 @@ For this Redis DB we are using a master node and a replica. All writes are handl
     volumes:
       - redis_replica_data:/data
 ```
+
 #### Testing
 After running the docker file, use the command `node src/tests/test-redis.js`. This will try to write into the cluster and then read from it.
+
+---
