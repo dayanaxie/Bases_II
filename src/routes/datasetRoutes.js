@@ -11,6 +11,10 @@ import {
   getUserVote,
   getDatasetVotes,
   removeVote,
+  createReply,
+  getCommentReplies,
+  getDatasetCommentsWithReplies,
+  hideReply
 } from "../config/neo4j.js";
 
 const router = express.Router();
@@ -407,6 +411,9 @@ router.patch("/comments/:commentId/hide", async (req, res) => {
   }
 });
 
+
+
+
 // Obtener votos de un dataset
 router.get("/:id/votes", async (req, res) => {
   try {
@@ -569,5 +576,190 @@ router.delete("/:id/votes", async (req, res) => {
     });
   }
 });
+
+
+
+
+// Obtener comentarios con respuestas
+router.get("/:id/comments-with-replies", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const comments = await getDatasetCommentsWithReplies(datasetId);
+
+    // Obtener información de usuarios desde MongoDB para comentarios y respuestas
+    const commentsWithUserData = await Promise.all(
+      comments.map(async (comment) => {
+        // Información del usuario que hizo el comentario
+        const commentUser = await User.findById(comment.userId).select('username nombreCompleto foto');
+        
+        // Información de usuarios que hicieron respuestas
+        const repliesWithUserData = await Promise.all(
+          comment.replies.map(async (reply) => {
+            const replyUser = await User.findById(reply.userId).select('username nombreCompleto foto');
+            return {
+              ...reply,
+              userName: replyUser?.username || 'Usuario desconocido',
+              userFullName: replyUser?.nombreCompleto || '',
+              userPhoto: replyUser?.foto || null
+            };
+          })
+        );
+
+        return {
+          ...comment,
+          userName: commentUser?.username || 'Usuario desconocido',
+          userFullName: commentUser?.nombreCompleto || '',
+          userPhoto: commentUser?.foto || null,
+          replies: repliesWithUserData
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      comments: commentsWithUserData
+    });
+  } catch (error) {
+    console.error("Error obteniendo comentarios con respuestas:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Obtener respuestas de un comentario específico
+router.get("/comments/:commentId/replies", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { datasetId } = req.query;
+
+    if (!datasetId) {
+      return res.status(400).json({
+        success: false,
+        error: "Dataset ID es requerido"
+      });
+    }
+
+    const replies = await getCommentReplies(commentId, datasetId);
+
+    // Obtener información de usuarios desde MongoDB
+    const repliesWithUserData = await Promise.all(
+      replies.map(async (reply) => {
+        const user = await User.findById(reply.userId).select('username nombreCompleto foto');
+        return {
+          ...reply,
+          userName: user?.username || 'Usuario desconocido',
+          userFullName: user?.nombreCompleto || '',
+          userPhoto: user?.foto || null
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      replies: repliesWithUserData
+    });
+  } catch (error) {
+    console.error("Error obteniendo respuestas:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Crear respuesta a un comentario
+router.post("/comments/:commentId/replies", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { userId, content, datasetId } = req.body;
+
+    if (!userId || !content || !datasetId) {
+      return res.status(400).json({
+        success: false,
+        error: "Usuario, contenido y dataset son requeridos"
+      });
+    }
+
+    // Verificar que el dataset existe
+    const dataset = await Dataset.findById(datasetId);
+    if (!dataset) {
+      return res.status(404).json({
+        success: false,
+        error: "Dataset no encontrado"
+      });
+    }
+
+    // Verificar que el usuario existe
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Usuario no encontrado"
+      });
+    }
+
+    // Verificar que el comentario existe
+    const comments = await getDatasetComments(datasetId);
+    const commentExists = comments.some(comment => comment.commentId === commentId);
+    if (!commentExists) {
+      return res.status(404).json({
+        success: false,
+        error: "Comentario no encontrado"
+      });
+    }
+
+    // Crear respuesta en Neo4j
+    const reply = await createReply(userId, commentId, content, datasetId);
+
+    if (!reply) {
+      throw new Error("Error al crear la respuesta");
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Respuesta creada exitosamente",
+      reply: {
+        ...reply,
+        userId: userId,
+        content: content,
+        userName: user.username,
+        userFullName: user.nombreCompleto,
+        userPhoto: user.foto
+      }
+    });
+
+  } catch (error) {
+    console.error("Error creando respuesta:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Ocultar respuesta (solo admin)
+router.patch("/replies/:replyId/hide", async (req, res) => {
+  try {
+    const { replyId } = req.params;
+
+    await hideReply(replyId);
+
+    res.json({
+      success: true,
+      message: "Respuesta ocultada exitosamente"
+    });
+  } catch (error) {
+    console.error("Error ocultando respuesta:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+
+
 
 export default router;

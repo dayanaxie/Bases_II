@@ -370,19 +370,20 @@ export const createComment = async (userId, datasetId, content) => {
     
     const result = await session.run(
       `MATCH (u:User {mongoId: $userId}), (d:Dataset {mongoId: $datasetId})
-       CREATE (u)-[r:COMMENTED {
+       CREATE (u)-[:WROTE]->(c:Comment {
          commentId: $commentId,
          content: $content,
          timestamp: datetime($timestamp),
-         hidden: false
-       }]->(d)
-       RETURN r.commentId as commentId, r.timestamp as timestamp`,
+         hidden: false,
+         datasetId: $datasetId
+       })-[:ON_DATASET]->(d)
+       RETURN c.commentId as commentId, c.timestamp as timestamp`,
       {
         userId: userId.toString(),
         datasetId: datasetId.toString(),
         commentId: commentId,
         content: content,
-        timestamp: now.toISOString() // Enviar timestamp en formato ISO
+        timestamp: now.toISOString()
       }
     );
 
@@ -390,7 +391,7 @@ export const createComment = async (userId, datasetId, content) => {
       const record = result.records[0];
       return {
         commentId: record.get('commentId'),
-        timestamp: now // Devolver la fecha que ya tenemos en JS
+        timestamp: now
       };
     }
     
@@ -408,11 +409,11 @@ export const getDatasetComments = async (datasetId) => {
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User)-[r:COMMENTED]->(d:Dataset {mongoId: $datasetId})
-       WHERE r.hidden = false
-       RETURN u.mongoId as userId, r.content as content, 
-              toString(r.timestamp) as timestampString, r.commentId as commentId
-       ORDER BY r.timestamp DESC`,
+      `MATCH (u:User)-[:WROTE]->(c:Comment)-[:ON_DATASET]->(d:Dataset {mongoId: $datasetId})
+       WHERE c.hidden = false
+       RETURN u.mongoId as userId, c.content as content, 
+              toString(c.timestamp) as timestampString, c.commentId as commentId
+       ORDER BY c.timestamp DESC`,
       {
         datasetId: datasetId.toString()
       }
@@ -421,14 +422,9 @@ export const getDatasetComments = async (datasetId) => {
     const comments = result.records.map(record => {
       const timestampString = record.get('timestampString');
       
-      // Convertir el string de timestamp de Neo4j a Date de JavaScript
       let jsDate;
       if (timestampString) {
-        // El formato típico de Neo4j es: "2024-01-15T10:30:00.000000000Z"
-        // Podemos usar new Date() directamente
         jsDate = new Date(timestampString);
-        
-        // Si falla la conversión, usar fecha actual
         if (isNaN(jsDate.getTime())) {
           console.warn('No se pudo parsear la fecha:', timestampString);
           jsDate = new Date();
@@ -459,8 +455,8 @@ export const hideComment = async (commentId) => {
   const session = driver.session();
   try {
     await session.run(
-      `MATCH ()-[r:COMMENTED {commentId: $commentId}]->()
-       SET r.hidden = true`,
+      `MATCH (c:Comment {commentId: $commentId})
+       SET c.hidden = true`,
       {
         commentId: commentId
       }
@@ -615,6 +611,261 @@ export const removeVote = async (userId, datasetId) => {
   }
 };
 
+
+// Crear respuesta a un comentario
+export const createReply = async (userId, commentId, content, datasetId) => {
+  const session = driver.session();
+  try {
+    const replyId = new Date().getTime().toString() + Math.random().toString(36).substr(2, 5);
+    const now = new Date();
+    
+    const result = await session.run(
+      `MATCH (u:User {mongoId: $userId}), 
+            (parentComment:Comment {commentId: $commentId})
+       CREATE (u)-[:WROTE]->(r:Comment {
+         commentId: $replyId,
+         content: $content,
+         timestamp: datetime($timestamp),
+         hidden: false,
+         datasetId: $datasetId,
+         isReply: true,
+         parentCommentId: $commentId
+       })-[:REPLY_TO]->(parentComment)
+       RETURN r.commentId as replyId, r.timestamp as timestamp`,
+      {
+        userId: userId.toString(),
+        commentId: commentId,
+        datasetId: datasetId.toString(),
+        replyId: replyId,
+        content: content,
+        timestamp: now.toISOString()
+      }
+    );
+
+    if (result.records.length > 0) {
+      const record = result.records[0];
+      return {
+        replyId: record.get('replyId'),
+        timestamp: now
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error creando respuesta:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener respuestas de un comentario
+export const getCommentReplies = async (commentId, datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User)-[:WROTE]->(r:Comment)-[:REPLY_TO]->(parent:Comment {commentId: $commentId})
+       WHERE r.hidden = false AND r.datasetId = $datasetId
+       RETURN u.mongoId as userId, r.content as content, 
+              toString(r.timestamp) as timestampString, 
+              r.commentId as replyId
+       ORDER BY r.timestamp ASC`,
+      {
+        commentId: commentId,
+        datasetId: datasetId.toString()
+      }
+    );
+
+    const replies = result.records.map(record => {
+      const timestampString = record.get('timestampString');
+      let jsDate = new Date();
+      
+      if (timestampString) {
+        jsDate = new Date(timestampString);
+        if (isNaN(jsDate.getTime())) {
+          jsDate = new Date();
+        }
+      }
+
+      return {
+        userId: record.get('userId'),
+        content: record.get('content'),
+        timestamp: jsDate,
+        replyId: record.get('replyId')
+      };
+    });
+
+    return replies;
+  } catch (error) {
+    console.error('Error obteniendo respuestas:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener comentarios con sus respuestas
+export const getDatasetCommentsWithReplies = async (datasetId) => {
+  try {
+    // Primero obtener los comentarios principales ordenados
+    const commentsResult = await getCommentsMain(datasetId);
+    
+    const commentsWithReplies = await Promise.all(
+      commentsResult.map(async (comment) => {
+        // Obtener respuestas para este comentario específico con nueva sesión
+        const replies = await getCommentRepliesWithNewSession(comment.commentId, datasetId);
+        
+        return {
+          userId: comment.userId,
+          content: comment.content,
+          timestamp: comment.timestamp,
+          commentId: comment.commentId,
+          replies: replies
+        };
+      })
+    );
+
+    // Filtrar comentarios nulos
+    return commentsWithReplies.filter(comment => comment !== null);
+  } catch (error) {
+    console.error('Error obteniendo comentarios con respuestas:', error);
+    throw error;
+  }
+};
+
+// Ocultar respuesta (para admin) - CORREGIDO
+export const hideReply = async (replyId) => {
+  const session = driver.session();
+  try {
+    await session.run(
+      `MATCH (r:Comment {commentId: $replyId})
+       SET r.hidden = true`,
+      {
+        replyId: replyId
+      }
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Error ocultando respuesta:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+
+
+// Función auxiliar para obtener comentarios principales
+const getCommentsMain = async (datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User)-[:WROTE]->(c:Comment)-[:ON_DATASET]->(d:Dataset {mongoId: $datasetId})
+       WHERE c.hidden = false AND NOT exists(c.isReply)
+       RETURN u.mongoId as commentUserId, 
+              c.content as commentContent, 
+              toString(c.timestamp) as commentTimestamp,
+              c.commentId as commentId
+       ORDER BY c.timestamp DESC`,
+      {
+        datasetId: datasetId.toString()
+      }
+    );
+
+    return result.records.map(record => {
+      const commentTimestamp = record.get('commentTimestamp');
+      let commentDate = new Date();
+      
+      if (commentTimestamp) {
+        commentDate = new Date(commentTimestamp);
+        if (isNaN(commentDate.getTime())) {
+          commentDate = new Date();
+        }
+      }
+
+      // Validar que el comentario tenga datos válidos
+      const commentUserId = record.get('commentUserId');
+      const commentContent = record.get('commentContent');
+      
+      if (!commentUserId || !commentContent) {
+        console.warn('Comentario con datos inválidos encontrado:', { 
+          commentId: record.get('commentId'), 
+          commentUserId, 
+          commentContent 
+        });
+        return null;
+      }
+
+      return {
+        userId: commentUserId,
+        content: commentContent,
+        timestamp: commentDate,
+        commentId: record.get('commentId')
+      };
+    }).filter(comment => comment !== null);
+  } catch (error) {
+    console.error('Error obteniendo comentarios principales:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Función auxiliar para obtener respuestas con nueva sesión
+const getCommentRepliesWithNewSession = async (commentId, datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (replyUser:User)-[:WROTE]->(r:Comment)-[:REPLY_TO]->(c:Comment {commentId: $commentId})
+       WHERE r.hidden = false AND r.content IS NOT NULL AND r.datasetId = $datasetId
+       RETURN replyUser.mongoId as replyUserId, 
+              r.content as replyContent, 
+              toString(r.timestamp) as replyTimestamp,
+              r.commentId as replyId
+       ORDER BY r.timestamp ASC`,
+      {
+        commentId: commentId,
+        datasetId: datasetId.toString()
+      }
+    );
+
+    const replies = result.records.map(replyRecord => {
+      const replyUserId = replyRecord.get('replyUserId');
+      const replyContent = replyRecord.get('replyContent');
+      const replyTimestamp = replyRecord.get('replyTimestamp');
+      const replyId = replyRecord.get('replyId');
+
+      // Validar que la respuesta tenga datos válidos
+      if (!replyUserId || !replyContent) {
+        console.warn('Respuesta con datos inválidos encontrada:', { replyId, replyUserId, replyContent });
+        return null;
+      }
+
+      let replyDate = new Date();
+      if (replyTimestamp) {
+        replyDate = new Date(replyTimestamp);
+        if (isNaN(replyDate.getTime())) {
+          replyDate = new Date();
+        }
+      }
+
+      return {
+        userId: replyUserId,
+        content: replyContent,
+        timestamp: replyDate,
+        replyId: replyId
+      };
+    }).filter(reply => reply !== null); // Filtrar respuestas nulas
+
+    return replies;
+  } catch (error) {
+    console.error(`Error obteniendo respuestas para comentario ${commentId}:`, error);
+    return []; // Retornar array vacío en caso de error
+  } finally {
+    await session.close();
+  }
+};
 
 
 

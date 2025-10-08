@@ -1,21 +1,16 @@
 import { requireAuth, logout } from './auth.js';
 
-//
 function getCurrentUser() {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
 }
 
-//
 document.addEventListener("DOMContentLoaded", async () => {
-    // Verificar autenticación
     if (!requireAuth()) return;
 
-    // Configurar navegación y tabs
     setupNavigation();
     initTabs();
     
-    // Obtener el ID del dataset de la URL
     const datasetId = getDatasetIdFromURL();
     
     if (!datasetId) {
@@ -23,30 +18,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Cargar la información real del dataset
     await loadDatasetData(datasetId);
 });
 
-//
 function getDatasetIdFromURL() {
     const pathParts = window.location.pathname.split('/');
     return pathParts[pathParts.length - 1];
 }
 
-// Configurar navegación
 function setupNavigation() {
-    // Botón de volver
     const backBtn = document.querySelector('.back-btn');
     backBtn.addEventListener('click', () => {
         window.location.href = '/datasetsUser';
     });
 
-    // Botón de salir (logout)
     const exitBtn = document.querySelector('.exit-btn');
     exitBtn.addEventListener('click', logout);
 }
 
-// Función principal para cargar datos del dataset desde la API
 async function loadDatasetData(datasetId) {
   try { 
     const response = await fetch(`/api/datasets/${datasetId}`);
@@ -68,7 +57,6 @@ async function loadDatasetData(datasetId) {
   }
 }
 
-// Función para cargar datos mock como fallback
 function loadMockData() {
     const datasetMock = {
         nombre: "Ejemplo Dataset",
@@ -83,10 +71,35 @@ function loadMockData() {
         },
         comments: [
             {
-                id: 1,
-                userName: "Nombre de usuario",
-                date: "29/09/2024",
-                text: "Texto de ejemplo: esto es un comentario aquí puedes ver el comentario etc..."
+                commentId: "1",
+                userName: "Usuario1",
+                content: "Texto de ejemplo: esto es un comentario aquí puedes ver el comentario etc...",
+                timestamp: new Date(),
+                userPhoto: null,
+                replies: [
+                    {
+                        replyId: "1-1",
+                        userName: "Usuario2",
+                        content: "Estoy de acuerdo con tu comentario, muy útil!",
+                        timestamp: new Date(),
+                        userPhoto: null
+                    },
+                    {
+                        replyId: "1-2", 
+                        userName: "Usuario3",
+                        content: "Gracias por la información adicional",
+                        timestamp: new Date(),
+                        userPhoto: null
+                    }
+                ]
+            },
+            {
+                commentId: "2",
+                userName: "Usuario4", 
+                content: "Otro comentario de ejemplo sin respuestas",
+                timestamp: new Date(),
+                userPhoto: null,
+                replies: []
             }
         ],
         votes: [
@@ -96,47 +109,36 @@ function loadMockData() {
                 voteType: "Me gusta",
                 timestamp: new Date(),
                 userPhoto: null
-            },
-            { 
-                userId: "2", 
-                userName: "Usuario2", 
-                voteType: "Me encanta",
-                timestamp: new Date(),
-                userPhoto: null
             }
         ]
     };
     
     renderDatasetInfo(datasetMock);
-    renderComments(datasetMock.comments);
-    renderVotes(datasetMock.votes);
+    renderComments(datasetMock._id || 'mock-id');
+    renderVotes(datasetMock._id || 'mock-id');
 }
 
 function renderDatasetInfo(dataset) {
     const infoPanel = document.getElementById("info");
     const detailsContainer = infoPanel.querySelector(".details");
     
-    // Actualizar el título de la página
     document.querySelector('h1').textContent = dataset.nombre || 'DataSet';
-    console.log("fecha:", dataset.fecha_inclusion);
     
     detailsContainer.innerHTML = `
         <p><strong>Nombre del DataSet:</strong> ${dataset.nombre || 'Sin nombre'}</p>
         <p><strong>Descripción:</strong> ${dataset.descripcion || 'Sin descripción'}</p>
         <p><strong>Fecha de inclusión:</strong> ${dataset.fecha_inclusion ? new Date(dataset.fecha_inclusion).toLocaleDateString() : '0'}</p>
-        <p><strong>Tamaño del archivo:</strong> ${dataset.tamano ? dataset.tamano + ' MB' : '0 MB'}</p>        <p><strong>Cantidad de descargas:</strong> ${dataset.descargas || 0}</p>
+        <p><strong>Tamaño del archivo:</strong> ${dataset.tamano ? dataset.tamano + ' MB' : '0 MB'}</p>
+        <p><strong>Cantidad de descargas:</strong> ${dataset.descargas || 0}</p>
         <p><strong>Creado por:</strong> ${dataset.creadorId?.username || 'Desconocido'}</p>
         ${dataset.estado ? `<p><strong>Estado:</strong> ${dataset.estado}</p>` : ''}
         ${dataset.archivos ? `<p><strong>Archivos:</strong> ${typeof dataset.archivos === 'number' ? dataset.archivos : dataset.archivos.length}</p>` : ''}
     `;
 
-    // Configurar medios (imagen y video) - se mantienen igual
     loadMedia(dataset);
     setupDownloadButton(dataset);
-
 }
 
-// Función para cargar medios (imagen y video)
 function loadMedia(dataset) {
     if (dataset.foto) {
         const imagePlaceholder = document.querySelector('.placeholder.image');
@@ -154,7 +156,6 @@ function loadMedia(dataset) {
     }
 }
 
-//
 function setupDownloadButton(dataset) {
     const downloadBtn = document.querySelector('.edit-btn');
     
@@ -166,14 +167,13 @@ function setupDownloadButton(dataset) {
     });
 }
 
-//
 async function downloadDataset(dataset) {
     if (dataset.archivos && dataset.archivos.length > 0) {
         try {
             alert(`Iniciando descarga de ${dataset.archivos.length} archivos...`);
             
             const response = await fetch(`/api/datasets/${dataset._id}/download`, {
-                method: 'POST', // o 'PATCH'
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 }
@@ -221,7 +221,6 @@ async function downloadDataset(dataset) {
     }
 }
 
-// Función para mostrar errores
 function showError(message) {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-message';
@@ -232,9 +231,8 @@ function showError(message) {
     document.querySelector('.container').prepend(errorDiv);
 }
 
-// ========== FUNCIONES EXISTENTES (sin cambios) ==========
+// ========== COMENTARIOS Y RESPUESTAS ==========
 
-// Función para renderizar comentarios 
 async function renderComments(datasetId) {
   const commentsContainer = document.getElementById("comments");
   commentsContainer.innerHTML = "";
@@ -242,7 +240,6 @@ async function renderComments(datasetId) {
   const commentsSection = document.createElement("div");
   commentsSection.classList.add("comments-section");
 
-  // Header con botón de agregar comentario (anclado)
   const commentsHeader = document.createElement("div");
   commentsHeader.classList.add("comments-header");
   commentsHeader.innerHTML = `
@@ -252,18 +249,16 @@ async function renderComments(datasetId) {
   `;
   commentsSection.appendChild(commentsHeader);
 
-  // Lista de comentarios
   const commentsList = document.createElement("div");
   commentsList.classList.add("comments-list");
 
   try {
-    // Obtener comentarios reales desde la API
-    const response = await fetch(`/api/datasets/${datasetId}/comments`);
+    const response = await fetch(`/api/datasets/${datasetId}/comments-with-replies`);
     const result = await response.json();
 
     if (result.success && result.comments.length > 0) {
       result.comments.forEach((comment, index) => {
-        const commentCard = createCommentCard(comment);
+        const commentCard = createCommentCard(comment, datasetId);
         commentsList.appendChild(commentCard);
 
         if (index < result.comments.length - 1) {
@@ -273,7 +268,6 @@ async function renderComments(datasetId) {
         }
       });
     } else {
-      // Mostrar mensaje si no hay comentarios
       const noComments = document.createElement("div");
       noComments.classList.add("no-comments");
       noComments.innerHTML = `
@@ -297,20 +291,16 @@ async function renderComments(datasetId) {
   commentsSection.appendChild(commentsList);
   commentsContainer.appendChild(commentsSection);
 
-  // Configurar evento para agregar comentario - CORREGIDO
   const addCommentBtn = commentsHeader.querySelector('.add-comment-btn');
   addCommentBtn.addEventListener("click", () => {
-    console.log("Botón de comentario clickeado");
     openCommentModal(datasetId);
   });
 }
 
-// Función para crear tarjeta de comentario
-function createCommentCard(comment) {
+function createCommentCard(comment, datasetId) {
   const commentCard = document.createElement("div");
   commentCard.classList.add("comment-card");
   
-  // Formatear fecha de manera segura
   let formattedDate = "Fecha desconocida";
   try {
     const commentDate = new Date(comment.timestamp);
@@ -322,13 +312,9 @@ function createCommentCard(comment) {
         hour: '2-digit',
         minute: '2-digit'
       });
-    } else {
-      console.warn('Fecha inválida en comentario:', comment.timestamp);
-      formattedDate = "Recién publicado";
     }
   } catch (error) {
     console.error('Error formateando fecha:', error);
-    formattedDate = "Recién publicado";
   }
 
   commentCard.innerHTML = `
@@ -345,12 +331,142 @@ function createCommentCard(comment) {
       <span class="comment-date">${formattedDate}</span>
     </div>
     <p class="comment-text">${comment.content}</p>
+    <div class="comment-actions">
+      <button class="reply-btn" data-comment-id="${comment.commentId}">
+        <i class="fa-solid fa-reply"></i> Responder
+      </button>
+    </div>
   `;
+
+  if (comment.replies && comment.replies.length > 0) {
+    const repliesSection = createRepliesSection(comment.replies, comment.commentId, datasetId);
+    commentCard.appendChild(repliesSection);
+  } else {
+    const noRepliesSection = createNoRepliesSection();
+    commentCard.appendChild(noRepliesSection);
+  }
+
+  const replyBtn = commentCard.querySelector('.reply-btn');
+  replyBtn.addEventListener('click', function() {
+    const commentId = this.getAttribute('data-comment-id');
+    openReplyModal(commentId, datasetId, comment.userName);
+  });
 
   return commentCard;
 }
 
-// Función para renderizar votos 
+function createRepliesSection(replies, commentId, datasetId) {
+  const repliesSection = document.createElement("div");
+  repliesSection.classList.add("replies-section");
+  
+  const repliesHeader = document.createElement("div");
+  repliesHeader.classList.add("replies-header");
+  repliesHeader.innerHTML = `
+    <span class="replies-count">
+      <i class="fa-solid fa-comments"></i>
+      ${replies.length} ${replies.length === 1 ? 'respuesta' : 'respuestas'}
+    </span>
+    <button class="replies-toggle">
+      <i class="fa-solid fa-chevron-down"></i> Mostrar
+    </button>
+  `;
+  repliesSection.appendChild(repliesHeader);
+
+  const repliesList = document.createElement("div");
+  repliesList.classList.add("replies-list");
+  repliesList.classList.add("collapsed");
+
+  replies.forEach((reply, index) => {
+    const replyElement = createReplyElement(reply);
+    repliesList.appendChild(replyElement);
+
+    if (index < replies.length - 1) {
+      const divider = document.createElement("div");
+      divider.classList.add("reply-divider");
+      repliesList.appendChild(divider);
+    }
+  });
+
+  repliesSection.appendChild(repliesList);
+
+  const toggleBtn = repliesHeader.querySelector('.replies-toggle');
+  const repliesListElement = repliesSection.querySelector('.replies-list');
+  const toggleIcon = toggleBtn.querySelector('i');
+
+  toggleBtn.addEventListener('click', function() {
+    const isCollapsed = repliesListElement.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      repliesListElement.classList.remove('collapsed');
+      toggleIcon.className = 'fa-solid fa-chevron-up';
+      toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Ocultar';
+    } else {
+      repliesListElement.classList.add('collapsed');
+      toggleIcon.className = 'fa-solid fa-chevron-down';
+      toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Mostrar';
+    }
+  });
+
+  return repliesSection;
+}
+
+function createNoRepliesSection() {
+  const noRepliesSection = document.createElement("div");
+  noRepliesSection.classList.add("replies-section");
+  
+  const noRepliesMessage = document.createElement("div");
+  noRepliesMessage.classList.add("no-replies");
+  noRepliesMessage.innerHTML = `
+    <i class="fa-regular fa-comment"></i>
+    <span>No hay respuestas aún. Sé el primero en responder.</span>
+  `;
+  
+  noRepliesSection.appendChild(noRepliesMessage);
+  return noRepliesSection;
+}
+
+// ⚠️ SOLO UNA FUNCIÓN createReplyElement - ELIMINAR LA DUPLICADA
+function createReplyElement(reply) {
+  const replyElement = document.createElement("div");
+  replyElement.classList.add("reply-card");
+  
+  let formattedDate = "Fecha desconocida";
+  try {
+    const replyDate = new Date(reply.timestamp);
+    if (!isNaN(replyDate.getTime())) {
+      formattedDate = replyDate.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+  }
+
+  replyElement.innerHTML = `
+    <div class="reply-header">
+      <div class="reply-user-info">
+        ${reply.userPhoto ? 
+          `<img src="${reply.userPhoto}" alt="${reply.userName}" class="reply-user-photo">` : 
+          `<div class="reply-user-placeholder">
+            <i class="fa-solid fa-user"></i>
+           </div>`
+        }
+        <span class="reply-user">${reply.userName}</span>
+      </div>
+      <span class="reply-date">${formattedDate}</span>
+    </div>
+    <p class="reply-text">${reply.content}</p>
+  `;
+
+  return replyElement;
+}
+
+// ========== VOTOS ==========
+
 async function renderVotes(datasetId) {
   const votesPanel = document.getElementById("votes");
   votesPanel.innerHTML = "";
@@ -358,7 +474,6 @@ async function renderVotes(datasetId) {
   const votesSection = document.createElement("div");
   votesSection.classList.add("votes-section");
 
-  // Header con botón de agregar voto (anclado)
   const votesHeader = document.createElement("div");
   votesHeader.classList.add("votes-header");
   
@@ -366,7 +481,6 @@ async function renderVotes(datasetId) {
   let userCurrentVote = null;
 
   try {
-    // Obtener el voto actual del usuario
     if (currentUser) {
       const response = await fetch(`/api/datasets/${datasetId}/my-vote`, {
         method: 'POST',
@@ -399,12 +513,10 @@ async function renderVotes(datasetId) {
   `;
   votesSection.appendChild(votesHeader);
 
-  // Lista de votos
   const votesList = document.createElement("div");
   votesList.classList.add("votes-list");
 
   try {
-    // Obtener votos reales desde la API
     const response = await fetch(`/api/datasets/${datasetId}/votes`);
     const result = await response.json();
 
@@ -420,7 +532,6 @@ async function renderVotes(datasetId) {
         }
       });
     } else {
-      // Mostrar mensaje si no hay votos
       const noVotes = document.createElement("div");
       noVotes.classList.add("no-votes");
       noVotes.innerHTML = `
@@ -444,19 +555,16 @@ async function renderVotes(datasetId) {
   votesSection.appendChild(votesList);
   votesPanel.appendChild(votesSection);
 
-  // Configurar evento para agregar/editar voto
   const addVoteBtn = votesHeader.querySelector('.add-vote-btn');
   addVoteBtn.addEventListener("click", () => {
     openVoteModal(datasetId, userCurrentVote);
   });
 }
 
-// Función para crear tarjeta de voto
 function createVoteCard(vote) {
   const voteCard = document.createElement("div");
   voteCard.classList.add("vote-card");
   
-  // Formatear fecha
   let formattedDate = "Fecha desconocida";
   try {
     const voteDate = new Date(vote.timestamp);
@@ -473,7 +581,6 @@ function createVoteCard(vote) {
     console.error('Error formateando fecha:', error);
   }
 
-  // Determinar clase CSS según el tipo de voto
   let voteClass = "";
   if (vote.voteType === "Me encanta" || vote.voteType === "Me gusta") {
     voteClass = "vote-positive";
@@ -502,8 +609,8 @@ function createVoteCard(vote) {
   return voteCard;
 }
 
+// ========== TABS Y MODALS ==========
 
-// Funcionalidad de tabs 
 function initTabs() {
   const tabs = document.querySelectorAll(".tab");
   const tabPanels = document.querySelectorAll(".tab-panel");
@@ -520,19 +627,151 @@ function initTabs() {
   });
 }
 
-// Funciones de modals 
-function attachReplyEventListeners() {
-  const replyButtons = document.querySelectorAll('.reply-btn');
-  replyButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      const commentId = this.getAttribute('data-comment-id');
-      openRepliesModal(commentId);
-    });
-  });
-}
+// Las funciones de modals (openReplyModal, openCommentModal, openVoteModal) 
+// se mantienen igual que en tu código original
+// ... [aquí van todas las funciones de modals sin cambios]
 
-function openRepliesModal(commentId) { 
-  alert(`Funcionalidad para mostrar respuestas del comentario ID: ${commentId}`); 
+
+// Función para abrir modal de respuesta
+function openReplyModal(commentId, datasetId, commentAuthor) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    alert("Debes iniciar sesión para responder");
+    return;
+  }
+
+  // Crear modal
+  const modal = document.createElement("div");
+  modal.classList.add("modal");
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  `;
+
+  modal.innerHTML = `
+    <div class="modal-content" style="
+      background: var(--variable-collection-objeto-0);
+      padding: 24px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    ">
+      <div class="modal-header" style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--variable-collection-contraste);
+      ">
+        <h3 style="margin: 0; color: var(--variable-collection-contraste);">Responder a ${commentAuthor}</h3>
+        <button class="close-modal" style="
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: var(--variable-collection-contraste);
+        ">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <textarea id="reply-text" placeholder="Escribe tu respuesta aquí..." style="
+          width: 95%;
+          height: 120px;
+          padding: 12px;
+          border: 1px solid var(--variable-collection-contraste);
+          border-radius: 8px;
+          background: var(--variable-collection-objeto-1);
+          color: var(--variable-collection-text-1);
+          resize: vertical;
+          font-family: Arial, sans-serif;
+        "></textarea>
+      </div>
+      
+      <div class="modal-footer" style="
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+      "> 
+        <button class="submit-reply-btn" style="
+          padding: 10px 20px;
+          border: none;
+          border-radius: 8px;
+          background: var(--variable-collection-contraste);
+          color: var(--variable-collection-text-2);
+          cursor: pointer;
+          font-weight: bold;
+        ">Publicar Respuesta</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Configurar eventos del modal
+  const closeBtn = modal.querySelector(".close-modal");
+  const submitBtn = modal.querySelector(".submit-reply-btn");
+  const textarea = modal.querySelector("#reply-text");
+
+  const closeModal = () => document.body.removeChild(modal);
+
+  closeBtn.addEventListener("click", closeModal);
+
+  submitBtn.addEventListener("click", async () => {
+    const content = textarea.value.trim();
+
+    if (!content) {
+      alert("Por favor escribe una respuesta");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/datasets/comments/${commentId}/replies`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: currentUser._id,
+            content: content,
+            datasetId: datasetId,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeModal();
+        // Recargar comentarios
+        await renderComments(datasetId);
+      } else {
+        alert("Error al publicar la respuesta: " + result.error);
+      }
+    } catch (error) {
+      console.error("Error publicando respuesta:", error);
+      alert("Error al publicar la respuesta");
+    }
+  });
+
+  // Cerrar modal al hacer clic fuera
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
 }
 
 // Función para abrir modal de comentario
@@ -622,19 +861,19 @@ function openCommentModal(datasetId) {
   document.body.appendChild(modal);
 
   // Configurar eventos del modal
-  const closeBtn = modal.querySelector('.close-modal');
+  const closeBtn = modal.querySelector(".close-modal");
   // const cancelBtn = modal.querySelector('.cancel-btn');
-  const submitBtn = modal.querySelector('.submit-comment-btn');
-  const textarea = modal.querySelector('#comment-text');
+  const submitBtn = modal.querySelector(".submit-comment-btn");
+  const textarea = modal.querySelector("#comment-text");
 
   const closeModal = () => document.body.removeChild(modal);
 
-  closeBtn.addEventListener('click', closeModal);
+  closeBtn.addEventListener("click", closeModal);
   // cancelBtn.addEventListener('click', closeModal);
 
-  submitBtn.addEventListener('click', async () => {
+  submitBtn.addEventListener("click", async () => {
     const content = textarea.value.trim();
-    
+
     if (!content) {
       alert("Por favor escribe un comentario");
       return;
@@ -642,14 +881,14 @@ function openCommentModal(datasetId) {
 
     try {
       const response = await fetch(`/api/datasets/${datasetId}/comments`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           userId: currentUser._id,
-          content: content
-        })
+          content: content,
+        }),
       });
 
       const result = await response.json();
@@ -668,13 +907,12 @@ function openCommentModal(datasetId) {
   });
 
   // Cerrar modal al hacer clic fuera
-  modal.addEventListener('click', (e) => {
+  modal.addEventListener("click", (e) => {
     if (e.target === modal) {
       closeModal();
     }
   });
 }
-
 
 // Función para abrir modal de voto
 function openVoteModal(datasetId, currentVote = null) {
@@ -701,13 +939,17 @@ function openVoteModal(datasetId, currentVote = null) {
   `;
 
   const voteOptions = ["Me encanta", "Me gusta", "No me gusta", "Me desagrada"];
-  
-  let optionsHTML = voteOptions.map(option => {
-    const isSelected = currentVote && currentVote.voteType === option;
-    return `
-      <option value="${option}" ${isSelected ? 'selected' : ''}>${option}</option>
+
+  let optionsHTML = voteOptions
+    .map((option) => {
+      const isSelected = currentVote && currentVote.voteType === option;
+      return `
+      <option value="${option}" ${
+        isSelected ? "selected" : ""
+      }>${option}</option>
     `;
-  }).join('');
+    })
+    .join("");
 
   modal.innerHTML = `
     <div class="modal-content" style="
@@ -727,7 +969,7 @@ function openVoteModal(datasetId, currentVote = null) {
         border-bottom: 1px solid var(--variable-collection-contraste);
       ">
         <h3 style="margin: 0; color: var(--variable-collection-contraste);">
-          ${currentVote ? 'Actualizar Voto' : 'Agregar Voto'}
+          ${currentVote ? "Actualizar Voto" : "Agregar Voto"}
         </h3>
         <button class="close-modal" style="
           background: none;
@@ -759,7 +1001,9 @@ function openVoteModal(datasetId, currentVote = null) {
           ${optionsHTML}
         </select>
         
-        ${currentVote ? `
+        ${
+          currentVote
+            ? `
           <div style="margin-top: 16px; text-align: center;">
             <button class="remove-vote-btn" style="
               padding: 8px 16px;
@@ -771,7 +1015,9 @@ function openVoteModal(datasetId, currentVote = null) {
               font-size: 14px;
             ">Eliminar mi voto</button>
           </div>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
       
       <div class="modal-footer" style="
@@ -789,7 +1035,7 @@ function openVoteModal(datasetId, currentVote = null) {
           cursor: pointer;
           font-weight: bold;
           flex: 1;
-        ">${currentVote ? 'Actualizar Voto' : 'Guardar Voto'}</button>
+        ">${currentVote ? "Actualizar Voto" : "Guardar Voto"}</button>
       </div>
     </div>
   `;
@@ -797,30 +1043,30 @@ function openVoteModal(datasetId, currentVote = null) {
   document.body.appendChild(modal);
 
   // Configurar eventos del modal
-  const closeBtn = modal.querySelector('.close-modal');
-  const submitBtn = modal.querySelector('.submit-vote-btn');
-  const voteSelect = modal.querySelector('#vote-type');
-  
+  const closeBtn = modal.querySelector(".close-modal");
+  const submitBtn = modal.querySelector(".submit-vote-btn");
+  const voteSelect = modal.querySelector("#vote-type");
+
   let removeVoteBtn = null;
   if (currentVote) {
-    removeVoteBtn = modal.querySelector('.remove-vote-btn');
+    removeVoteBtn = modal.querySelector(".remove-vote-btn");
   }
 
   const closeModal = () => document.body.removeChild(modal);
 
-  closeBtn.addEventListener('click', closeModal);
+  closeBtn.addEventListener("click", closeModal);
 
   if (removeVoteBtn) {
-    removeVoteBtn.addEventListener('click', async () => {
+    removeVoteBtn.addEventListener("click", async () => {
       try {
         const response = await fetch(`/api/datasets/${datasetId}/votes`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            userId: currentUser._id
-          })
+            userId: currentUser._id,
+          }),
         });
 
         const result = await response.json();
@@ -838,9 +1084,9 @@ function openVoteModal(datasetId, currentVote = null) {
     });
   }
 
-  submitBtn.addEventListener('click', async () => {
+  submitBtn.addEventListener("click", async () => {
     const voteType = voteSelect.value;
-    
+
     if (!voteType) {
       alert("Por favor selecciona un tipo de voto");
       return;
@@ -848,14 +1094,14 @@ function openVoteModal(datasetId, currentVote = null) {
 
     try {
       const response = await fetch(`/api/datasets/${datasetId}/votes`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           userId: currentUser._id,
-          voteType: voteType
-        })
+          voteType: voteType,
+        }),
       });
 
       const result = await response.json();
@@ -874,7 +1120,7 @@ function openVoteModal(datasetId, currentVote = null) {
   });
 
   // Cerrar modal al hacer clic fuera
-  modal.addEventListener('click', (e) => {
+  modal.addEventListener("click", (e) => {
     if (e.target === modal) {
       closeModal();
     }
