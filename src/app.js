@@ -73,6 +73,14 @@ app.get("/usersUser", (req, res) => {
   res.sendFile(path.join(__dirname, "views/users-user.html"));
 });
 
+app.get("/datasetsUser/:id", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/dataset.html"));
+});
+
+app.get("/usersAdmin", (req, res) => {
+  res.sendFile(path.join(__dirname, "views/users-admin.html"));
+});
+
 app.get("/profile-user", (req, res) => {
   res.sendFile(path.join(__dirname, "views/profile-user.html"));
 });
@@ -85,6 +93,13 @@ app.get("/messages-users", (req, res) => {
 // Servir CSS y JS de views
 app.use("/css", express.static(path.join(__dirname, "views/css")));
 app.use("/js", express.static(path.join(__dirname, "views/js")));
+
+// Servir archivos estáticos desde las carpetas de uploads
+app.use('/uploads/dataset-images', express.static(path.join(__dirname, 'uploads/dataset-images')));
+app.use('/uploads/dataset-videos', express.static(path.join(__dirname, 'uploads/dataset-videos')));
+app.use('/uploads/dataset-files', express.static(path.join(__dirname, 'uploads/dataset-files')));
+app.use('/uploads/profile-pictures', express.static(path.join(__dirname, 'uploads/profile-pictures')));
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);

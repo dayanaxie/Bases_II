@@ -252,8 +252,10 @@ p {
   display: flex;
   flex-direction: column;
   margin-bottom: 4px;
-  align-items: flex-start; /* Esto alinea ambos a la izquierda */
-  width: 100%; /* Asegura que ocupe todo el ancho */
+  align-items: flex-start; 
+  width: 100%; 
+  gap: 2px;
+
 }
 
 .dataset-info .dataset-name {
@@ -276,4 +278,46 @@ p {
   line-height: 1;
   width: 100%; /* Ocupa todo el ancho disponible */
   text-align: left; /* Alinea a la izquierda */
+}
+
+/* Estilos para el botón del creador */
+.dataset-info .creator-btn {
+    font-size: 0.9rem;
+    color: #666;
+    background: none;
+    border: none;
+    margin: 0;
+    padding: 0;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+}
+
+
+.dataset-info .creator-btn:hover {
+    color: #1a73e8;
+}
+
+/* Descripción del dataset */
+.dataset-info .dataset-description {
+    margin-top: 8px;       
+    padding: 8px 0;        
+    border-top: 1px solid #f0f0f0;
+}
+
+.dataset-info .dataset-description p {
+    font-size: 0.95rem;
+    color: #555;
+    margin: 0;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Máximo 3 líneas */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }

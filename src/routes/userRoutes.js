@@ -355,8 +355,7 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
       username,
       nombreCompleto,
       correoElectronico,
-      fechaNacimiento,
-      tipoUsuario
+      fechaNacimiento
     } = req.body;
 
     // Buscar usuario
@@ -406,7 +405,6 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
     if (nombreCompleto) updateData.nombreCompleto = nombreCompleto;
     if (correoElectronico) updateData.correoElectronico = correoElectronico.toLowerCase();
     if (fechaNacimiento) updateData.fechaNacimiento = fechaNacimiento;
-    if (tipoUsuario) updateData.tipoUsuario = tipoUsuario;
     
     // Actualizar foto si se proporciona
     if (req.file) {
@@ -459,6 +457,49 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
   }
 });
 
+// PATCH /api/users/:id/role - Actualizar el rol de un usuario
+router.patch('/:id/tipoUsuario', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { tipoUsuario } = req.body;
+
+        // Validar que el tipoUsuario sea válido
+        if (!tipoUsuario || !['usuario', 'admin'].includes(tipoUsuario)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Tipo de usuario inválido. Debe ser "usuario" o "admin"'
+            });
+        }
+
+        // Verificar que el usuario existe
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Usuario no encontrado'
+            });
+        }
+        // Actualizar el usuario
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { tipoUsuario },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        res.json({
+            success: true,
+            message: `Rol actualizado a ${tipoUsuario}`,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Error actualizando rol:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error del servidor al actualizar el rol'
+        });
+    }
+});
 // Obtener seguidores de un usuario con datos completos - CORREGIDO
 router.get('/followers/:userId', async (req, res) => {
   try {

@@ -506,3 +506,73 @@ body {
         height: 400px;
     }
 }
+/* Estilos para modo edición */
+.profile-image-container.editable {
+    cursor: pointer;
+    position: relative;
+}
+
+.profile-image-container.editable::after {
+    content: '📷 Cambiar foto';
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.profile-image-container.editable:hover {
+    opacity: 0.8;
+}
+
+/* Estilos para inputs de edición */
+.edit-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    box-sizing: border-box;
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Estilos para el botón de edición */
+.edit-button {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.edit-button:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.edit-button:active {
+    transform: translateY(0);
+}
+
+/* Ocultar input de archivo */
+#avatar-input {
+    display: none;
+}
