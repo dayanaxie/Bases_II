@@ -167,4 +167,124 @@ export const getFollowing = async (userMongoId) => {
 };
 
 
+
+
+
+// Crear relación MESSAGE entre usuarios - CORREGIDA
+export const sendMessage = async (senderMongoId, receiverMongoId, content, messageId) => {
+  const session = driver.session();
+  try {
+    console.log('📝 Creando mensaje en Neo4j:', {
+      sender: senderMongoId.toString(),
+      receiver: receiverMongoId.toString(),
+      messageId: messageId.toString(),
+      content: content
+    });
+
+    const result = await session.run(
+      `MATCH (sender:User {mongoId: $senderMongoId}), (receiver:User {mongoId: $receiverMongoId})
+       CREATE (sender)-[r:MESSAGE {
+         messageId: $messageId,
+         content: $content,
+         timestamp: datetime()
+       }]->(receiver)
+       RETURN r`,
+      {
+        senderMongoId: senderMongoId.toString(),
+        receiverMongoId: receiverMongoId.toString(),
+        messageId: messageId.toString(),
+        content: content
+      }
+    );
+    
+    console.log('✅ Mensaje creado en Neo4j - Relaciones afectadas:', result.records.length);
+    return result;
+  } catch (error) {
+    console.error('❌ Error creando mensaje en Neo4j:', error.message);
+    console.error('Stack trace:', error.stack);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener mensajes entre dos usuarios - CORREGIDA
+export const getMessagesBetweenUsers = async (user1MongoId, user2MongoId) => {
+  const session = driver.session();
+  try {
+    console.log('🔍 Buscando mensajes entre:', user1MongoId.toString(), 'y', user2MongoId.toString());
+
+    const result = await session.run(
+      `MATCH (u1:User {mongoId: $user1MongoId})-[r:MESSAGE]-(u2:User {mongoId: $user2MongoId})
+       RETURN r.messageId as messageId,
+              r.content as content,
+              r.timestamp as timestamp,
+              startNode(r).mongoId as actualSender,
+              endNode(r).mongoId as actualReceiver
+       ORDER BY r.timestamp ASC`,
+      {
+        user1MongoId: user1MongoId.toString(),
+        user2MongoId: user2MongoId.toString()
+      }
+    );
+    
+    console.log('Mensajes encontrados:', result.records.length);
+    
+    const messages = result.records.map(record => {
+      const messageId = record.get('messageId');
+      const content = record.get('content');
+      const timestamp = record.get('timestamp');
+      const actualSender = record.get('actualSender');
+      const actualReceiver = record.get('actualReceiver');
+      
+      console.log('Procesando mensaje:', { messageId, actualSender, actualReceiver });
+      
+      return {
+        _id: messageId,
+        content: content,
+        sender: actualSender,
+        receiver: actualReceiver,
+        timestamp: new Date(timestamp.toString())
+      };
+    });
+    
+    return messages;
+  } catch (error) {
+    console.error('❌ Error obteniendo mensajes de Neo4j:', error.message);
+    console.error('Stack trace:', error.stack);
+    return [];
+  } finally {
+    await session.close();
+  }
+};
+
+// Verificar si hay mensajes entre dos usuarios - CORREGIDA
+export const hasMessagesBetween = async (user1MongoId, user2MongoId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u1:User {mongoId: $user1MongoId})-[r:MESSAGE]-(u2:User {mongoId: $user2MongoId})
+       RETURN count(r) > 0 as hasMessages`,
+      {
+        user1MongoId: user1MongoId.toString(),
+        user2MongoId: user2MongoId.toString()
+      }
+    );
+    
+    const hasMessages = result.records[0]?.get('hasMessages') || false;
+    console.log(`📊 ¿Hay mensajes entre ${user1MongoId} y ${user2MongoId}?`, hasMessages);
+    
+    return hasMessages;
+  } catch (error) {
+    console.error('❌ Error verificando mensajes en Neo4j:', error.message);
+    return false;
+  } finally {
+    await session.close();
+  }
+};
+
+
+
+
+
 export default driver;

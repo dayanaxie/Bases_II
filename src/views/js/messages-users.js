@@ -42,18 +42,25 @@ class MessagesManager {
             window.location.href = '/profile-user';
         });
 
-        // Chat functionality
-        document.getElementById('back-to-list').addEventListener('click', () => {
-            this.showUsersList();
+        // Modal functionality
+        document.getElementById('close-modal').addEventListener('click', () => {
+            this.closeModal();
         });
 
-        document.getElementById('send-message').addEventListener('click', () => {
+        document.getElementById('modal-send-message').addEventListener('click', () => {
             this.sendMessage();
         });
 
-        document.getElementById('message-input').addEventListener('keypress', (e) => {
+        document.getElementById('modal-message-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.sendMessage();
+            }
+        });
+
+        // Cerrar modal al hacer clic fuera del contenido
+        document.getElementById('chat-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'chat-modal') {
+                this.closeModal();
             }
         });
 
@@ -170,45 +177,98 @@ class MessagesManager {
     }
 
     async selectUser(user) {
+        console.log('selectUser called with:', user);
         this.selectedUser = user;
-        this.showChat();
-        this.updateChatHeader(user);
+        this.showModal();
+        this.updateModalHeader(user);
         await this.loadMessages(user._id);
     }
 
-    showChat() {
-        document.querySelector('.users-list').classList.add('hidden');
-        document.getElementById('chat-container').classList.remove('hidden');
-        document.getElementById('message-input').focus();
+    showModal() {
+        document.getElementById('chat-modal').classList.remove('hidden');
+        document.getElementById('modal-message-input').focus();
+        document.body.style.overflow = 'hidden'; // Prevenir scroll del body
     }
 
-    showUsersList() {
-        document.querySelector('.users-list').classList.remove('hidden');
-        document.getElementById('chat-container').classList.add('hidden');
+    closeModal() {
+        document.getElementById('chat-modal').classList.add('hidden');
+        document.body.style.overflow = ''; // Restaurar scroll del body
         this.selectedUser = null;
     }
 
-    updateChatHeader(user) {
-        document.getElementById('chat-user-name').textContent = user.nombreCompleto || user.username;
-        const avatar = document.getElementById('chat-user-avatar');
+    updateModalHeader(user) {
+        console.log('updateModalHeader called with user:', user);
+        
+        document.getElementById('modal-user-name').textContent = user.nombreCompleto || user.username;
+        const avatar = document.getElementById('modal-user-avatar');
+        
+        console.log('Avatar element:', avatar);
+        console.log('User photo:', user.foto);
+        
+        // Limpiar el contenido previo
         avatar.innerHTML = '';
         
-        if (user.foto) {
+        // Verificar si el usuario tiene foto válida
+        const hasValidPhoto = user.foto && 
+                            user.foto !== 'null' && 
+                            user.foto !== 'undefined' && 
+                            user.foto !== '' &&
+                            !user.foto.includes('undefined') &&
+                            !user.foto.includes('null');
+
+        console.log('Has valid photo:', hasValidPhoto);
+
+        if (hasValidPhoto) {
+            console.log('Creating image with URL:', `http://localhost:3000${user.foto}`);
             const img = document.createElement('img');
             img.src = `http://localhost:3000${user.foto}`;
             img.alt = user.nombreCompleto || user.username;
-            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+            
+            // Aplicar estilos directamente
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.borderRadius = '50%';
+            img.style.objectFit = 'cover';
+            
             img.onerror = () => {
-                avatar.textContent = (user.nombreCompleto || user.username).charAt(0);
+                console.log('Image failed to load, using fallback');
+                this.showAvatarFallback(avatar);
             };
+            
+            img.onload = () => {
+                console.log('Image loaded successfully');
+            };
+            
             avatar.appendChild(img);
         } else {
-            avatar.textContent = (user.nombreCompleto || user.username).charAt(0);
+            console.log('No valid photo, using fallback');
+            this.showAvatarFallback(avatar);
         }
+    }
+
+    // Método auxiliar para mostrar el fallback
+    showAvatarFallback(avatarElement) {
+        avatarElement.innerHTML = '';
+        const fallback = document.createElement('div');
+        fallback.style.cssText = `
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: var(--variable-collection-text-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--variable-collection-contraste);
+            font-size: 16px;
+        `;
+        fallback.innerHTML = '<i class="fa-solid fa-user"></i>';
+        avatarElement.appendChild(fallback);
     }
 
     async loadMessages(otherUserId) {
         try {
+            console.log('Cargando mensajes para usuario:', otherUserId);
+            
             const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:3000/api/users/messages/conversation/${otherUserId}?currentUserId=${this.currentUser._id}`, {
                 headers: {
@@ -220,19 +280,34 @@ class MessagesManager {
             const result = await response.json();
 
             if (result.success) {
-                this.messages.set(otherUserId, result.messages);
-                this.renderMessages(result.messages);
+                console.log('Mensajes cargados desde:', result.source);
+                
+                if (result.hasMessages && result.messages.length > 0) {
+                    console.log(`Se encontraron ${result.messages.length} mensajes`);
+                    this.messages.set(otherUserId, result.messages);
+                    this.renderMessages(result.messages);
+                } else {
+                    // No hay mensajes entre estos usuarios
+                    console.log('No hay mensajes entre estos usuarios');
+                    this.messages.set(otherUserId, []);
+                    this.renderMessages([]);
+                }
             } else {
                 console.error('Error loading messages:', result.message);
-                // Para testing, crear mensajes de ejemplo
+                this.showError('Error al cargar los mensajes: ' + result.message);
+                // Fallback: crear mensajes de ejemplo
                 this.createMockMessages(otherUserId);
             }
         } catch (error) {
             console.error('Error loading messages:', error);
-            // Para testing, crear mensajes de ejemplo
+            this.showError('Error de conexión al cargar mensajes');
+            // Fallback: crear mensajes de ejemplo
             this.createMockMessages(otherUserId);
         }
     }
+
+    // Actualizar el método sendMessage para mejor manejo de error
+
     createMockMessages(otherUserId) {
         // Mensajes de ejemplo para testing
         const mockMessages = [
@@ -259,7 +334,7 @@ class MessagesManager {
     }
 
     renderMessages(messages) {
-        const container = document.getElementById('messages-container');
+        const container = document.getElementById('modal-messages-container');
         
         if (!messages || messages.length === 0) {
             container.innerHTML = '<div class="no-messages">No hay mensajes. ¡Envía el primero!</div>';
@@ -273,20 +348,29 @@ class MessagesManager {
             </div>
         `).join('');
 
+        // Auto-scroll al final
         container.scrollTop = container.scrollHeight;
     }
-
+    
     async sendMessage() {
-        const input = document.getElementById('message-input');
+        const input = document.getElementById('modal-message-input');
         const content = input.value.trim();
 
-        if (!content || !this.selectedUser) return;
+        if (!content || !this.selectedUser) {
+            this.showError('Escribe un mensaje primero');
+            return;
+        }
 
+        // Mostrar mensaje localmente inmediatamente para mejor UX
+        this.addLocalMessage(content);
+        
         try {
-            const response = await fetch('/api/users/messages/send', {
+            const token = localStorage.getItem('token');
+            const response = await fetch('http://localhost:3000/api/users/messages/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     content: content,
@@ -298,23 +382,29 @@ class MessagesManager {
             const result = await response.json();
 
             if (result.success) {
-                // Add to local storage
-                if (!this.messages.has(this.selectedUser._id)) {
-                    this.messages.set(this.selectedUser._id, []);
+                console.log('Mensaje guardado en:', result.source);
+                
+                // Reemplazar el mensaje local con el mensaje real de Neo4j
+                if (this.messages.has(this.selectedUser._id)) {
+                    const userMessages = this.messages.get(this.selectedUser._id);
+                    // Encontrar y reemplazar el último mensaje local con el ID real
+                    const lastIndex = userMessages.length - 1;
+                    if (lastIndex >= 0) {
+                        userMessages[lastIndex] = result.message;
+                        this.messages.set(this.selectedUser._id, userMessages);
+                        this.renderMessages(userMessages);
+                    }
                 }
-                this.messages.get(this.selectedUser._id).push(result.message);
-
-                // Clear input and re-render
+                
+                // Limpiar input
                 input.value = '';
-                this.renderMessages(this.messages.get(this.selectedUser._id));
             } else {
-                // Si falla el envío, agregar localmente para testing
-                this.addLocalMessage(content);
+                console.error('Error sending message:', result.message);
+                this.showError('Error al enviar el mensaje: ' + result.message);
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            // En caso de error, agregar mensaje localmente
-            this.addLocalMessage(content);
+            this.showError('Error de conexión al enviar mensaje');
         }
     }
 
@@ -333,7 +423,7 @@ class MessagesManager {
         }
         this.messages.get(this.selectedUser._id).push(newMessage);
 
-        const input = document.getElementById('message-input');
+        const input = document.getElementById('modal-message-input');
         input.value = '';
         this.renderMessages(this.messages.get(this.selectedUser._id));
     }
@@ -361,10 +451,27 @@ class MessagesManager {
 
     formatTime(timestamp) {
         const date = new Date(timestamp);
-        return date.toLocaleTimeString('es-ES', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
+        const now = new Date();
+        const diffInHours = (now - date) / (1000 * 60 * 60);
+        
+        // Si es hoy, mostrar solo la hora
+        if (diffInHours < 24 && date.getDate() === now.getDate()) {
+            return date.toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        } 
+        // Si es de días anteriores, mostrar fecha
+        else {
+            return date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit'
+            }) + ' ' + date.toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
     }
 
     showError(message) {
