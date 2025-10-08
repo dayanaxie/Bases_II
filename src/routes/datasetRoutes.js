@@ -1,6 +1,8 @@
 import express from "express";
 import Dataset from "../models/Dataset.js";
+import User from "../models/User.js";
 import { uploadDataset } from "../config/multer.js";
+import { createDatasetReferenceInNeo4j, createComment, getDatasetComments, hideComment } from "../config/neo4j.js";
 
 const router = express.Router();
 
@@ -64,6 +66,15 @@ router.post("/", uploadDataset.fields([
     });
 
     await dataset.save();
+
+    // Cra referencia en Neo4j 
+    try {
+      await createDatasetReferenceInNeo4j(dataset._id, creadorId);
+      console.log('✅ Referencia de dataSet creada en Neo4j');
+    } catch (neo4jError) {
+      console.error('⚠️ dataSet creado en MongoDB pero falló en Neo4j:', neo4jError.message);
+      // No fallamos la petición completa si Neo4j falla
+    }
     
     res.status(201).json({
       success: true,
@@ -245,6 +256,127 @@ router.patch("/:id/estado", async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: err.message 
+    });
+  }
+});
+
+
+
+// Obtener comentarios de un dataset
+router.get("/:id/comments", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const comments = await getDatasetComments(datasetId);
+
+    // Obtener información de usuarios desde MongoDB
+    const commentsWithUserData = await Promise.all(
+      comments.map(async (comment) => {
+        const user = await User.findById(comment.userId).select('username nombreCompleto foto');
+        return {
+          ...comment,
+          userName: user?.username || 'Usuario desconocido',
+          userFullName: user?.nombreCompleto || '',
+          userPhoto: user?.foto || null
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      comments: commentsWithUserData
+    });
+  } catch (error) {
+    console.error("Error obteniendo comentarios:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Crear comentario en un dataset
+router.post("/:id/comments", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const { userId, content } = req.body;
+
+    if (!userId || !content) {
+      return res.status(400).json({
+        success: false,
+        error: "Usuario y contenido son requeridos"
+      });
+    }
+
+    // Verificar que el dataset existe
+    const dataset = await Dataset.findById(datasetId);
+    if (!dataset) {
+      return res.status(404).json({
+        success: false,
+        error: "Dataset no encontrado"
+      });
+    }
+
+    // Verificar que el usuario existe
+    const user = await User.findById(userId); // ✅ AHORA User ESTÁ DEFINIDO
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Usuario no encontrado"
+      });
+    }
+
+    // Crear comentario en Neo4j
+    const comment = await createComment(userId, datasetId, content);
+
+    if (!comment) {
+      throw new Error("Error al crear el comentario");
+    }
+
+    // Obtener información del usuario para la respuesta
+    const userData = {
+      username: user.username,
+      nombreCompleto: user.nombreCompleto,
+      foto: user.foto
+    };
+
+    res.status(201).json({
+      success: true,
+      message: "Comentario creado exitosamente",
+      comment: {
+        ...comment,
+        userId: userId,
+        content: content,
+        userName: user.username,
+        userFullName: user.nombreCompleto,
+        userPhoto: user.foto
+      }
+    });
+
+  } catch (error) {
+    console.error("Error creando comentario:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Ocultar comentario (solo admin)
+router.patch("/comments/:commentId/hide", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+
+    await hideComment(commentId);
+
+    res.json({
+      success: true,
+      message: "Comentario ocultado exitosamente"
+    });
+  } catch (error) {
+    console.error("Error ocultando comentario:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });

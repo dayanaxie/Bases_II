@@ -1,5 +1,11 @@
 import { requireAuth, logout } from './auth.js';
 
+function getCurrentUser() {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+}
+
+
 document.addEventListener("DOMContentLoaded", async () => {
     // Verificar autenticación
     if (!requireAuth()) return;
@@ -40,25 +46,24 @@ function setupNavigation() {
 
 // Función principal para cargar datos del dataset desde la API
 async function loadDatasetData(datasetId) {
-    try { 
-        const response = await fetch(`/api/datasets/${datasetId}`);
-        
-        if (!response.ok) {
-            throw new Error('Dataset no encontrado');
-        }
-
-        const datasetData = await response.json();
-        
-        renderDatasetInfo(datasetData);
-        renderComments(datasetData.comments || []);
-        renderVotes(datasetData.votes || []);
-        
-    } catch (error) {
-        console.error("Error cargando datos del dataset:", error);
-        showError('Error al cargar el dataset');
-        // Usar datos mock como fallback
-        loadMockData();
+  try { 
+    const response = await fetch(`/api/datasets/${datasetId}`);
+    
+    if (!response.ok) {
+      throw new Error('Dataset no encontrado');
     }
+
+    const datasetData = await response.json();
+    
+    renderDatasetInfo(datasetData);
+    await renderComments(datasetId); // Cambiar esta línea
+    renderVotes(datasetData.votes || []);
+    
+  } catch (error) {
+    console.error("Error cargando datos del dataset:", error);
+    showError('Error al cargar el dataset');
+    loadMockData();
+  }
 }
 
 // Función para cargar datos mock como fallback
@@ -213,7 +218,7 @@ function showError(message) {
 // ========== FUNCIONES EXISTENTES (sin cambios) ==========
 
 // Función para renderizar comentarios (sin cambios)
-function renderComments(comments) {
+async function renderComments(datasetId) {
   const commentsContainer = document.getElementById("comments");
   commentsContainer.innerHTML = "";
 
@@ -234,39 +239,101 @@ function renderComments(comments) {
   const commentsList = document.createElement("div");
   commentsList.classList.add("comments-list");
 
-  comments.forEach((comment, index) => {
-    const commentCard = document.createElement("div");
-    commentCard.classList.add("comment-card");
-    commentCard.innerHTML = `
-      <div class="comment-header">
-        <span class="comment-user">${comment.userName}</span>
-        <span class="comment-date">${comment.date}</span>
-      </div>
-      <p class="comment-text">${comment.text}</p>
-      <div class="comment-actions">
-        <button class="reply-btn" data-comment-id="${comment.id}">
-          <i class="fa-solid fa-comment"></i> Respuestas
-        </button>
-      </div>
-    `;
+  try {
+    // Obtener comentarios reales desde la API
+    const response = await fetch(`/api/datasets/${datasetId}/comments`);
+    const result = await response.json();
 
-    commentsList.appendChild(commentCard);
+    if (result.success && result.comments.length > 0) {
+      result.comments.forEach((comment, index) => {
+        const commentCard = createCommentCard(comment);
+        commentsList.appendChild(commentCard);
 
-    if (index < comments.length - 1) {
-      const divider = document.createElement("div");
-      divider.classList.add("comment-divider");
-      commentsList.appendChild(divider);
+        if (index < result.comments.length - 1) {
+          const divider = document.createElement("div");
+          divider.classList.add("comment-divider");
+          commentsList.appendChild(divider);
+        }
+      });
+    } else {
+      // Mostrar mensaje si no hay comentarios
+      const noComments = document.createElement("div");
+      noComments.classList.add("no-comments");
+      noComments.innerHTML = `
+        <p style="text-align: center; color: var(--variable-collection-text-1); padding: 20px;">
+          No hay comentarios aún. Sé el primero en comentar.
+        </p>
+      `;
+      commentsList.appendChild(noComments);
     }
-  });
+  } catch (error) {
+    console.error("Error cargando comentarios:", error);
+    const errorMsg = document.createElement("div");
+    errorMsg.innerHTML = `
+      <p style="text-align: center; color: var(--variable-collection-negativo); padding: 20px;">
+        Error al cargar los comentarios.
+      </p>
+    `;
+    commentsList.appendChild(errorMsg);
+  }
 
   commentsSection.appendChild(commentsList);
   commentsContainer.appendChild(commentsSection);
 
+  // Configurar evento para agregar comentario - CORREGIDO
   const addCommentBtn = commentsHeader.querySelector('.add-comment-btn');
-  addCommentBtn.addEventListener("click", openCommentModal);
-  
-  attachReplyEventListeners();
+  addCommentBtn.addEventListener("click", () => {
+    console.log("Botón de comentario clickeado");
+    openCommentModal(datasetId);
+  });
 }
+
+
+// Función para crear tarjeta de comentario
+function createCommentCard(comment) {
+  const commentCard = document.createElement("div");
+  commentCard.classList.add("comment-card");
+  
+  // Formatear fecha de manera segura
+  let formattedDate = "Fecha desconocida";
+  try {
+    const commentDate = new Date(comment.timestamp);
+    if (!isNaN(commentDate.getTime())) {
+      formattedDate = commentDate.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } else {
+      console.warn('Fecha inválida en comentario:', comment.timestamp);
+      formattedDate = "Recién publicado";
+    }
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    formattedDate = "Recién publicado";
+  }
+
+  commentCard.innerHTML = `
+    <div class="comment-header">
+      <div class="comment-user-info">
+        ${comment.userPhoto ? 
+          `<img src="${comment.userPhoto}" alt="${comment.userName}" class="comment-user-photo">` : 
+          `<div class="comment-user-placeholder">
+            <i class="fa-solid fa-user"></i>
+           </div>`
+        }
+        <span class="comment-user">${comment.userName}</span>
+      </div>
+      <span class="comment-date">${formattedDate}</span>
+    </div>
+    <p class="comment-text">${comment.content}</p>
+  `;
+
+  return commentCard;
+}
+
 
 // Función para renderizar votos (sin cambios)
 function renderVotes(votes) {
@@ -346,9 +413,146 @@ function openRepliesModal(commentId) {
   alert(`Funcionalidad para mostrar respuestas del comentario ID: ${commentId}`); 
 }
 
-function openCommentModal() { 
-  alert("Funcionalidad para agregar comentario - Conectar con base de datos"); 
+// Función para abrir modal de comentario (ACTUALIZADA)
+function openCommentModal(datasetId) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    alert("Debes iniciar sesión para comentar");
+    return;
+  }
+
+  // Crear modal
+  const modal = document.createElement("div");
+  modal.classList.add("modal");
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  `;
+
+  modal.innerHTML = `
+    <div class="modal-content" style="
+      background: var(--variable-collection-objeto-0);
+      padding: 24px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    ">
+      <div class="modal-header" style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--variable-collection-contraste);
+      ">
+        <h3 style="margin: 0; color: var(--variable-collection-contraste);">Agregar Comentario</h3>
+        <button class="close-modal" style="
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: var(--variable-collection-contraste);
+        ">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <textarea id="comment-text" placeholder="Escribe tu comentario aquí..." style="
+          width: 95%;
+          height: 120px;
+          padding: 12px;
+          border: 1px solid var(--variable-collection-contraste);
+          border-radius: 8px;
+          background: var(--variable-collection-objeto-1);
+          color: var(--variable-collection-text-1);
+          resize: vertical;
+          font-family: Arial, sans-serif;
+        "></textarea>
+      </div>
+      
+      <div class="modal-footer" style="
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+      "> 
+        <button class="submit-comment-btn" style="
+          padding: 10px 20px;
+          border: none;
+          border-radius: 8px;
+          background: var(--variable-collection-contraste);
+          color: var(--variable-collection-text-2);
+          cursor: pointer;
+          font-weight: bold;
+        ">Publicar Comentario</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Configurar eventos del modal
+  const closeBtn = modal.querySelector('.close-modal');
+  // const cancelBtn = modal.querySelector('.cancel-btn');
+  const submitBtn = modal.querySelector('.submit-comment-btn');
+  const textarea = modal.querySelector('#comment-text');
+
+  const closeModal = () => document.body.removeChild(modal);
+
+  closeBtn.addEventListener('click', closeModal);
+  // cancelBtn.addEventListener('click', closeModal);
+
+  submitBtn.addEventListener('click', async () => {
+    const content = textarea.value.trim();
+    
+    if (!content) {
+      alert("Por favor escribe un comentario");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/datasets/${datasetId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser._id,
+          content: content
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeModal();
+        // Recargar comentarios
+        await renderComments(datasetId);
+      } else {
+        alert("Error al publicar el comentario: " + result.error);
+      }
+    } catch (error) {
+      console.error("Error publicando comentario:", error);
+      alert("Error al publicar el comentario");
+    }
+  });
+
+  // Cerrar modal al hacer clic fuera
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
 }
+
 
 function openVoteModal() { 
   alert("Funcionalidad para agregar voto - Conectar con base de datos");

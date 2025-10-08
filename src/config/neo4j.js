@@ -27,20 +27,23 @@ export const testNeo4jConnection = async () => {
 };
 
 // Función para crear solo la referencia en Neo4j
-export const createUserReferenceInNeo4j = async (mongoId) => {
+export const createUserReferenceInNeo4j = async (userId) => {
   const session = driver.session();
   try {
+    // Usar MERGE en lugar de CREATE para evitar duplicados
     const result = await session.run(
-      `CREATE (u:User { mongoId: $mongoId }) RETURN u`,
-      { mongoId: mongoId.toString() }
+      `MERGE (u:User {mongoId: $userId})
+       ON CREATE SET u.createdAt = datetime()
+       RETURN u.mongoId as userId`,
+      {
+        userId: userId.toString()
+      }
     );
-    console.log(
-      "✅ Referencia de usuario creada en Neo4j con ID:",
-      mongoId.toString()
-    );
-    return result;
+
+    console.log('✅ Referencia de usuario creada/verificada en Neo4j');
+    return result.records[0];
   } catch (error) {
-    console.error("❌ Error creando referencia en Neo4j:", error.message);
+    console.error('Error creando referencia de usuario en Neo4j:', error);
     throw error;
   } finally {
     await session.close();
@@ -168,8 +171,6 @@ export const getFollowing = async (userMongoId) => {
 
 
 
-
-
 // Crear relación MESSAGE entre usuarios - CORREGIDA
 export const sendMessage = async (senderMongoId, receiverMongoId, content, messageId) => {
   const session = driver.session();
@@ -285,6 +286,194 @@ export const hasMessagesBetween = async (user1MongoId, user2MongoId) => {
 
 
 
+
+// Crear referencia de dataset en Neo4j con relación CREATE
+export const createDatasetReferenceInNeo4j = async (datasetId, creatorId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {mongoId: $creatorId})
+       CREATE (u)-[r:CREATED]->(d:Dataset {
+         mongoId: $datasetId,
+         createdAt: datetime()
+       })
+       RETURN d.mongoId as datasetId, r.createdAt as createdAt`,
+      {
+        datasetId: datasetId.toString(),
+        creatorId: creatorId.toString()
+      }
+    );
+
+    console.log('✅ Referencia de dataset creada en Neo4j con relación CREATE');
+    return result.records[0];
+  } catch (error) {
+    console.error('Error creando referencia de dataset en Neo4j:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Verificar si existe un dataset en Neo4j
+export const datasetExistsInNeo4j = async (datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (d:Dataset {mongoId: $datasetId}) RETURN d.mongoId as datasetId`,
+      {
+        datasetId: datasetId.toString()
+      }
+    );
+
+    return result.records.length > 0;
+  } catch (error) {
+    console.error('Error verificando dataset en Neo4j:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener creador de un dataset
+export const getDatasetCreator = async (datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User)-[:CREATED]->(d:Dataset {mongoId: $datasetId})
+       RETURN u.mongoId as creatorId`,
+      {
+        datasetId: datasetId.toString()
+      }
+    );
+
+    if (result.records.length > 0) {
+      return result.records[0].get('creatorId');
+    }
+    return null;
+  } catch (error) {
+    console.error('Error obteniendo creador del dataset:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+
+
+
+// Crear comentario en un dataset
+export const createComment = async (userId, datasetId, content) => {
+  const session = driver.session();
+  try {
+    const commentId = new Date().getTime().toString();
+    const now = new Date();
+    
+    const result = await session.run(
+      `MATCH (u:User {mongoId: $userId}), (d:Dataset {mongoId: $datasetId})
+       CREATE (u)-[r:COMMENTED {
+         commentId: $commentId,
+         content: $content,
+         timestamp: datetime($timestamp),
+         hidden: false
+       }]->(d)
+       RETURN r.commentId as commentId, r.timestamp as timestamp`,
+      {
+        userId: userId.toString(),
+        datasetId: datasetId.toString(),
+        commentId: commentId,
+        content: content,
+        timestamp: now.toISOString() // Enviar timestamp en formato ISO
+      }
+    );
+
+    if (result.records.length > 0) {
+      const record = result.records[0];
+      return {
+        commentId: record.get('commentId'),
+        timestamp: now // Devolver la fecha que ya tenemos en JS
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error creando comentario:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener comentarios de un dataset
+export const getDatasetComments = async (datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User)-[r:COMMENTED]->(d:Dataset {mongoId: $datasetId})
+       WHERE r.hidden = false
+       RETURN u.mongoId as userId, r.content as content, 
+              toString(r.timestamp) as timestampString, r.commentId as commentId
+       ORDER BY r.timestamp DESC`,
+      {
+        datasetId: datasetId.toString()
+      }
+    );
+
+    const comments = result.records.map(record => {
+      const timestampString = record.get('timestampString');
+      
+      // Convertir el string de timestamp de Neo4j a Date de JavaScript
+      let jsDate;
+      if (timestampString) {
+        // El formato típico de Neo4j es: "2024-01-15T10:30:00.000000000Z"
+        // Podemos usar new Date() directamente
+        jsDate = new Date(timestampString);
+        
+        // Si falla la conversión, usar fecha actual
+        if (isNaN(jsDate.getTime())) {
+          console.warn('No se pudo parsear la fecha:', timestampString);
+          jsDate = new Date();
+        }
+      } else {
+        jsDate = new Date();
+      }
+
+      return {
+        userId: record.get('userId'),
+        content: record.get('content'),
+        timestamp: jsDate,
+        commentId: record.get('commentId')
+      };
+    });
+
+    return comments;
+  } catch (error) {
+    console.error('Error obteniendo comentarios:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Ocultar comentario (para admin)
+export const hideComment = async (commentId) => {
+  const session = driver.session();
+  try {
+    await session.run(
+      `MATCH ()-[r:COMMENTED {commentId: $commentId}]->()
+       SET r.hidden = true`,
+      {
+        commentId: commentId
+      }
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Error ocultando comentario:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
 
 
 export default driver;
