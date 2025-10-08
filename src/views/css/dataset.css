@@ -405,10 +405,48 @@ body {
   margin-bottom: 8px;
 }
 
+.vote-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vote-user-photo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--variable-collection-contraste);
+}
+
+.vote-user-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--variable-collection-objeto-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--variable-collection-contraste);
+  border: 1px solid var(--variable-collection-contraste);
+}
+
+
 .vote-user {
   font-weight: bold;
   color: var(--variable-collection-contraste);
   font-size: 16px;
+}
+
+.vote-date {
+  color: var(--variable-collection-text-1);
+  font-size: 12px;
+}
+
+.vote-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .vote-type {
@@ -426,11 +464,11 @@ body {
 
 /* Colores para diferentes tipos de votos */
 .vote-positive {
-  color: var(--variable-collection-text-2);
+  color: var(--variable-collection-contraste);
 }
 
 .vote-negative {
-  color: var(--variable-collection-negativo);
+  color: var(--variable-collection-contraste);
 }
 
 .votes-divider {
@@ -438,6 +476,15 @@ body {
   background-color: var(--variable-collection-contraste);
   margin: 16px 0;
   opacity: 0.3;
+}
+
+.no-votes {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--variable-collection-text-1);
+  background: var(--variable-collection-objeto-1);
+  border-radius: 8px;
+  margin-top: 16px;
 }
 
 /* Mejoras para el modal  */
@@ -460,3 +507,19 @@ body {
   background: var(--variable-collection-objeto-1);
 }
 
+
+/* Estilos para el select en el modal */
+.modal-content select:focus {
+  outline: none;
+  border-color: var(--variable-collection-text-2);
+}
+
+.submit-vote-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submit-vote-btn:hover:not(:disabled) {
+  background: var(--variable-collection-text-2);
+  color: var(--variable-collection-contraste);
+}

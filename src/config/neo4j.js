@@ -476,4 +476,146 @@ export const hideComment = async (commentId) => {
 };
 
 
+
+
+// Crear o actualizar voto en un dataset
+export const createOrUpdateVote = async (userId, datasetId, voteType) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {mongoId: $userId}), (d:Dataset {mongoId: $datasetId})
+       MERGE (u)-[r:VOTED]->(d)
+       SET r.voteType = $voteType, r.timestamp = datetime()
+       RETURN r.voteType as voteType, r.timestamp as timestamp`,
+      {
+        userId: userId.toString(),
+        datasetId: datasetId.toString(),
+        voteType: voteType
+      }
+    );
+
+    if (result.records.length > 0) {
+      const record = result.records[0];
+      const timestampString = record.get('timestamp');
+      return {
+        voteType: record.get('voteType'),
+        timestamp: new Date(timestampString.toString())
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error creando/actualizando voto:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener voto de un usuario específico en un dataset
+export const getUserVote = async (userId, datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {mongoId: $userId})-[r:VOTED]->(d:Dataset {mongoId: $datasetId})
+       RETURN r.voteType as voteType, toString(r.timestamp) as timestampString`,
+      {
+        userId: userId.toString(),
+        datasetId: datasetId.toString()
+      }
+    );
+
+    if (result.records.length > 0) {
+      const record = result.records[0];
+      const timestampString = record.get('timestampString');
+      let jsDate = new Date();
+      
+      if (timestampString) {
+        jsDate = new Date(timestampString);
+        if (isNaN(jsDate.getTime())) {
+          jsDate = new Date();
+        }
+      }
+
+      return {
+        voteType: record.get('voteType'),
+        timestamp: jsDate
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error obteniendo voto del usuario:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Obtener todos los votos de un dataset
+export const getDatasetVotes = async (datasetId) => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User)-[r:VOTED]->(d:Dataset {mongoId: $datasetId})
+       RETURN u.mongoId as userId, r.voteType as voteType, 
+              toString(r.timestamp) as timestampString
+       ORDER BY r.timestamp DESC`,
+      {
+        datasetId: datasetId.toString()
+      }
+    );
+
+    const votes = result.records.map(record => {
+      const timestampString = record.get('timestampString');
+      let jsDate = new Date();
+      
+      if (timestampString) {
+        jsDate = new Date(timestampString);
+        if (isNaN(jsDate.getTime())) {
+          jsDate = new Date();
+        }
+      }
+
+      return {
+        userId: record.get('userId'),
+        voteType: record.get('voteType'),
+        timestamp: jsDate
+      };
+    });
+
+    return votes;
+  } catch (error) {
+    console.error('Error obteniendo votos:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+// Eliminar voto de un usuario
+export const removeVote = async (userId, datasetId) => {
+  const session = driver.session();
+  try {
+    await session.run(
+      `MATCH (:User {mongoId: $userId})-[r:VOTED]->(:Dataset {mongoId: $datasetId})
+       DELETE r`,
+      {
+        userId: userId.toString(),
+        datasetId: datasetId.toString()
+      }
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Error eliminando voto:', error);
+    throw error;
+  } finally {
+    await session.close();
+  }
+};
+
+
+
+
 export default driver;

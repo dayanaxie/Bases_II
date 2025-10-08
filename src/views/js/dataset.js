@@ -1,11 +1,12 @@
 import { requireAuth, logout } from './auth.js';
 
+//
 function getCurrentUser() {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
 }
 
-
+//
 document.addEventListener("DOMContentLoaded", async () => {
     // Verificar autenticación
     if (!requireAuth()) return;
@@ -26,6 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadDatasetData(datasetId);
 });
 
+//
 function getDatasetIdFromURL() {
     const pathParts = window.location.pathname.split('/');
     return pathParts[pathParts.length - 1];
@@ -56,8 +58,8 @@ async function loadDatasetData(datasetId) {
     const datasetData = await response.json();
     
     renderDatasetInfo(datasetData);
-    await renderComments(datasetId); // Cambiar esta línea
-    renderVotes(datasetData.votes || []);
+    await renderComments(datasetId); 
+    await renderVotes(datasetId); 
     
   } catch (error) {
     console.error("Error cargando datos del dataset:", error);
@@ -88,7 +90,20 @@ function loadMockData() {
             }
         ],
         votes: [
-            { id: 1, userName: "Nombre de usuario", vote: "Me gusta" }
+            { 
+                userId: "1", 
+                userName: "Usuario1", 
+                voteType: "Me gusta",
+                timestamp: new Date(),
+                userPhoto: null
+            },
+            { 
+                userId: "2", 
+                userName: "Usuario2", 
+                voteType: "Me encanta",
+                timestamp: new Date(),
+                userPhoto: null
+            }
         ]
     };
     
@@ -139,6 +154,7 @@ function loadMedia(dataset) {
     }
 }
 
+//
 function setupDownloadButton(dataset) {
     const downloadBtn = document.querySelector('.edit-btn');
     
@@ -150,7 +166,7 @@ function setupDownloadButton(dataset) {
     });
 }
 
-
+//
 async function downloadDataset(dataset) {
     if (dataset.archivos && dataset.archivos.length > 0) {
         try {
@@ -204,6 +220,7 @@ async function downloadDataset(dataset) {
         alert('No hay archivos disponibles para descargar');
     }
 }
+
 // Función para mostrar errores
 function showError(message) {
     const errorDiv = document.createElement('div');
@@ -217,7 +234,7 @@ function showError(message) {
 
 // ========== FUNCIONES EXISTENTES (sin cambios) ==========
 
-// Función para renderizar comentarios (sin cambios)
+// Función para renderizar comentarios 
 async function renderComments(datasetId) {
   const commentsContainer = document.getElementById("comments");
   commentsContainer.innerHTML = "";
@@ -288,7 +305,6 @@ async function renderComments(datasetId) {
   });
 }
 
-
 // Función para crear tarjeta de comentario
 function createCommentCard(comment) {
   const commentCard = document.createElement("div");
@@ -334,54 +350,160 @@ function createCommentCard(comment) {
   return commentCard;
 }
 
-
-// Función para renderizar votos (sin cambios)
-function renderVotes(votes) {
+// Función para renderizar votos 
+async function renderVotes(datasetId) {
   const votesPanel = document.getElementById("votes");
   votesPanel.innerHTML = "";
 
   const votesSection = document.createElement("div");
   votesSection.classList.add("votes-section");
 
+  // Header con botón de agregar voto (anclado)
   const votesHeader = document.createElement("div");
   votesHeader.classList.add("votes-header");
+  
+  const currentUser = getCurrentUser();
+  let userCurrentVote = null;
+
+  try {
+    // Obtener el voto actual del usuario
+    if (currentUser) {
+      const response = await fetch(`/api/datasets/${datasetId}/my-vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser._id
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        userCurrentVote = result.vote;
+      }
+    }
+  } catch (error) {
+    console.error("Error obteniendo voto actual:", error);
+  }
+
+  let buttonText = "Agregar Voto";
+  if (userCurrentVote) {
+    buttonText = `Mi voto: ${userCurrentVote.voteType}`;
+  }
+
   votesHeader.innerHTML = `
     <button class="add-vote-btn">
-      <i class="fa-solid fa-plus"></i> Agregar Voto
+      <i class="fa-solid fa-plus"></i> ${buttonText}
     </button>
   `;
   votesSection.appendChild(votesHeader);
 
+  // Lista de votos
   const votesList = document.createElement("div");
   votesList.classList.add("votes-list");
 
-  votes.forEach((vote, index) => {
-    const voteCard = document.createElement("div");
-    voteCard.classList.add("vote-card");
-    voteCard.innerHTML = `
-      <div class="vote-header">
-        <span class="vote-user">${vote.userName}</span>
-        <span class="vote-type">${vote.vote}</span>
-      </div>
-    `;
+  try {
+    // Obtener votos reales desde la API
+    const response = await fetch(`/api/datasets/${datasetId}/votes`);
+    const result = await response.json();
 
-    votesList.appendChild(voteCard);
+    if (result.success && result.votes.length > 0) {
+      result.votes.forEach((vote, index) => {
+        const voteCard = createVoteCard(vote);
+        votesList.appendChild(voteCard);
 
-    if (index < votes.length - 1) {
-      const divider = document.createElement("div");
-      divider.classList.add("vote-divider");
-      votesList.appendChild(divider);
+        if (index < result.votes.length - 1) {
+          const divider = document.createElement("div");
+          divider.classList.add("vote-divider");
+          votesList.appendChild(divider);
+        }
+      });
+    } else {
+      // Mostrar mensaje si no hay votos
+      const noVotes = document.createElement("div");
+      noVotes.classList.add("no-votes");
+      noVotes.innerHTML = `
+        <p style="text-align: center; color: var(--variable-collection-text-1); padding: 20px;">
+          No hay votos aún. Sé el primero en votar.
+        </p>
+      `;
+      votesList.appendChild(noVotes);
     }
-  });
+  } catch (error) {
+    console.error("Error cargando votos:", error);
+    const errorMsg = document.createElement("div");
+    errorMsg.innerHTML = `
+      <p style="text-align: center; color: var(--variable-collection-negativo); padding: 20px;">
+        Error al cargar los votos.
+      </p>
+    `;
+    votesList.appendChild(errorMsg);
+  }
 
   votesSection.appendChild(votesList);
   votesPanel.appendChild(votesSection);
 
+  // Configurar evento para agregar/editar voto
   const addVoteBtn = votesHeader.querySelector('.add-vote-btn');
-  addVoteBtn.addEventListener("click", openVoteModal);
+  addVoteBtn.addEventListener("click", () => {
+    openVoteModal(datasetId, userCurrentVote);
+  });
 }
 
-// Funcionalidad de tabs (sin cambios)
+// Función para crear tarjeta de voto
+function createVoteCard(vote) {
+  const voteCard = document.createElement("div");
+  voteCard.classList.add("vote-card");
+  
+  // Formatear fecha
+  let formattedDate = "Fecha desconocida";
+  try {
+    const voteDate = new Date(vote.timestamp);
+    if (!isNaN(voteDate.getTime())) {
+      formattedDate = voteDate.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+  }
+
+  // Determinar clase CSS según el tipo de voto
+  let voteClass = "";
+  if (vote.voteType === "Me encanta" || vote.voteType === "Me gusta") {
+    voteClass = "vote-positive";
+  } else if (vote.voteType === "No me gusta" || vote.voteType === "Me desagrada") {
+    voteClass = "vote-negative";
+  }
+
+  voteCard.innerHTML = `
+    <div class="vote-header">
+      <div class="vote-user-info">
+        ${vote.userPhoto ? 
+          `<img src="${vote.userPhoto}" alt="${vote.userName}" class="vote-user-photo">` : 
+          `<div class="vote-user-placeholder">
+            <i class="fa-solid fa-user"></i>
+           </div>`
+        }
+        <span class="vote-user">${vote.userName}</span>
+      </div>
+      <span class="vote-date">${formattedDate}</span>
+    </div>
+    <div class="vote-content">
+      <span class="vote-type ${voteClass}">${vote.voteType}</span>
+    </div>
+  `;
+
+  return voteCard;
+}
+
+
+// Funcionalidad de tabs 
 function initTabs() {
   const tabs = document.querySelectorAll(".tab");
   const tabPanels = document.querySelectorAll(".tab-panel");
@@ -398,7 +520,7 @@ function initTabs() {
   });
 }
 
-// Funciones de modals (sin cambios)
+// Funciones de modals 
 function attachReplyEventListeners() {
   const replyButtons = document.querySelectorAll('.reply-btn');
   replyButtons.forEach(button => {
@@ -413,7 +535,7 @@ function openRepliesModal(commentId) {
   alert(`Funcionalidad para mostrar respuestas del comentario ID: ${commentId}`); 
 }
 
-// Función para abrir modal de comentario (ACTUALIZADA)
+// Función para abrir modal de comentario
 function openCommentModal(datasetId) {
   const currentUser = getCurrentUser();
   if (!currentUser) {
@@ -554,6 +676,207 @@ function openCommentModal(datasetId) {
 }
 
 
-function openVoteModal() { 
-  alert("Funcionalidad para agregar voto - Conectar con base de datos");
+// Función para abrir modal de voto
+function openVoteModal(datasetId, currentVote = null) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    alert("Debes iniciar sesión para votar");
+    return;
+  }
+
+  // Crear modal
+  const modal = document.createElement("div");
+  modal.classList.add("modal");
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  `;
+
+  const voteOptions = ["Me encanta", "Me gusta", "No me gusta", "Me desagrada"];
+  
+  let optionsHTML = voteOptions.map(option => {
+    const isSelected = currentVote && currentVote.voteType === option;
+    return `
+      <option value="${option}" ${isSelected ? 'selected' : ''}>${option}</option>
+    `;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-content" style="
+      background: var(--variable-collection-objeto-0);
+      padding: 24px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    ">
+      <div class="modal-header" style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--variable-collection-contraste);
+      ">
+        <h3 style="margin: 0; color: var(--variable-collection-contraste);">
+          ${currentVote ? 'Actualizar Voto' : 'Agregar Voto'}
+        </h3>
+        <button class="close-modal" style="
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: var(--variable-collection-contraste);
+        ">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <label style="
+          display: block;
+          margin-bottom: 8px;
+          color: var(--variable-collection-contraste);
+          font-weight: bold;
+        ">Selecciona tu voto:</label>
+        <select id="vote-type" style="
+          width: 100%;
+          padding: 12px;
+          border: 1px solid var(--variable-collection-contraste);
+          border-radius: 8px;
+          background: var(--variable-collection-objeto-1);
+          color: var(--variable-collection-text-1);
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+        ">
+          <option value="">Selecciona una opción...</option>
+          ${optionsHTML}
+        </select>
+        
+        ${currentVote ? `
+          <div style="margin-top: 16px; text-align: center;">
+            <button class="remove-vote-btn" style="
+              padding: 8px 16px;
+              border: 1px solid var(--variable-collection-negativo);
+              border-radius: 6px;
+              background: transparent;
+              color: var(--variable-collection-negativo);
+              cursor: pointer;
+              font-size: 14px;
+            ">Eliminar mi voto</button>
+          </div>
+        ` : ''}
+      </div>
+      
+      <div class="modal-footer" style="
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+      "> 
+        <button class="submit-vote-btn" style="
+          padding: 10px 20px;
+          border: none;
+          border-radius: 8px;
+          background: var(--variable-collection-contraste);
+          color: var(--variable-collection-text-2);
+          cursor: pointer;
+          font-weight: bold;
+          flex: 1;
+        ">${currentVote ? 'Actualizar Voto' : 'Guardar Voto'}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Configurar eventos del modal
+  const closeBtn = modal.querySelector('.close-modal');
+  const submitBtn = modal.querySelector('.submit-vote-btn');
+  const voteSelect = modal.querySelector('#vote-type');
+  
+  let removeVoteBtn = null;
+  if (currentVote) {
+    removeVoteBtn = modal.querySelector('.remove-vote-btn');
+  }
+
+  const closeModal = () => document.body.removeChild(modal);
+
+  closeBtn.addEventListener('click', closeModal);
+
+  if (removeVoteBtn) {
+    removeVoteBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch(`/api/datasets/${datasetId}/votes`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: currentUser._id
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          closeModal();
+          await renderVotes(datasetId);
+        } else {
+          alert("Error al eliminar el voto: " + result.error);
+        }
+      } catch (error) {
+        console.error("Error eliminando voto:", error);
+        alert("Error al eliminar el voto");
+      }
+    });
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    const voteType = voteSelect.value;
+    
+    if (!voteType) {
+      alert("Por favor selecciona un tipo de voto");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/datasets/${datasetId}/votes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser._id,
+          voteType: voteType
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeModal();
+        // Recargar votos
+        await renderVotes(datasetId);
+      } else {
+        alert("Error al registrar el voto: " + result.error);
+      }
+    } catch (error) {
+      console.error("Error registrando voto:", error);
+      alert("Error al registrar el voto");
+    }
+  });
+
+  // Cerrar modal al hacer clic fuera
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
 }

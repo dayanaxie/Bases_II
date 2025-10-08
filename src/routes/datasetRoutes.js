@@ -2,110 +2,129 @@ import express from "express";
 import Dataset from "../models/Dataset.js";
 import User from "../models/User.js";
 import { uploadDataset } from "../config/multer.js";
-import { createDatasetReferenceInNeo4j, createComment, getDatasetComments, hideComment } from "../config/neo4j.js";
+import {
+  createDatasetReferenceInNeo4j,
+  createComment,
+  getDatasetComments,
+  hideComment,
+  createOrUpdateVote,
+  getUserVote,
+  getDatasetVotes,
+  removeVote,
+} from "../config/neo4j.js";
 
 const router = express.Router();
 
 // Crear dataset con múltiples archivos
-router.post("/", uploadDataset.fields([
-  { name: 'foto', maxCount: 1 },
-  { name: 'video_guia', maxCount: 1 },
-  { name: 'archivos', maxCount: 10 }
-]), async (req, res) => {
-  try {
-    console.log("Archivos recibidos para dataset:", req.files);
-    console.log("Datos recibidos:", req.body);
-
-    const { nombre, descripcion } = req.body;
-
-    // Validaciones
-    if (!nombre || !descripcion) {
-      return res.status(400).json({ 
-        success: false,
-        error: "Nombre y descripción son obligatorios" 
-      });
-    }
-
-    const creadorId = req.body.creadorId;
-    
-    if (!creadorId) {
-      return res.status(400).json({
-        success: false,
-        error: "ID de usuario creador es requerido"
-      });
-    }
-
-    // Procesar archivos
-    const foto = req.files['foto'] ? req.files['foto'][0] : null;
-    const video_guia = req.files['video_guia'] ? req.files['video_guia'][0] : null;
-    const archivos = req.files['archivos'] ? req.files['archivos'] : [];
-
-    // Calcular tamaño total en bytes
-    let tamanoTotal = 0;
-    if (foto) tamanoTotal += foto.size;
-    if (video_guia) tamanoTotal += video_guia.size;
-    archivos.forEach(archivo => {
-      tamanoTotal += archivo.size;
-    });
-
-    // Convertir a MB con dos decimales
-    tamanoTotal = Number((tamanoTotal / (1024 * 1024)).toFixed(2));
-
-
-    const dataset = new Dataset({
-      nombre: nombre,
-      descripcion: descripcion,
-      foto: foto ? `/uploads/dataset-images/${foto.filename}` : null,
-      video_guia: video_guia ? `/uploads/dataset-videos/${video_guia.filename}` : null,
-      archivos: archivos.map(archivo => `/uploads/dataset-files/${archivo.filename}`),
-      estado: "pendiente", 
-      tamano: tamanoTotal, // En bytes
-      descargas: 0, // Inicializar en 0
-      creadorId: creadorId
-
-    });
-
-    await dataset.save();
-
-    // Cra referencia en Neo4j 
+router.post(
+  "/",
+  uploadDataset.fields([
+    { name: "foto", maxCount: 1 },
+    { name: "video_guia", maxCount: 1 },
+    { name: "archivos", maxCount: 10 },
+  ]),
+  async (req, res) => {
     try {
-      await createDatasetReferenceInNeo4j(dataset._id, creadorId);
-      console.log('✅ Referencia de dataSet creada en Neo4j');
-    } catch (neo4jError) {
-      console.error('⚠️ dataSet creado en MongoDB pero falló en Neo4j:', neo4jError.message);
-      // No fallamos la petición completa si Neo4j falla
-    }
-    
-    res.status(201).json({
-      success: true,
-      message: "Dataset creado exitosamente",
-      dataset: dataset
-    });
+      console.log("Archivos recibidos para dataset:", req.files);
+      console.log("Datos recibidos:", req.body);
 
-  } catch (err) {
-    console.error("Error creando dataset:", err);
-    
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
+      const { nombre, descripcion } = req.body;
+
+      // Validaciones
+      if (!nombre || !descripcion) {
+        return res.status(400).json({
+          success: false,
+          error: "Nombre y descripción son obligatorios",
+        });
+      }
+
+      const creadorId = req.body.creadorId;
+
+      if (!creadorId) {
+        return res.status(400).json({
+          success: false,
+          error: "ID de usuario creador es requerido",
+        });
+      }
+
+      // Procesar archivos
+      const foto = req.files["foto"] ? req.files["foto"][0] : null;
+      const video_guia = req.files["video_guia"]
+        ? req.files["video_guia"][0]
+        : null;
+      const archivos = req.files["archivos"] ? req.files["archivos"] : [];
+
+      // Calcular tamaño total en bytes
+      let tamanoTotal = 0;
+      if (foto) tamanoTotal += foto.size;
+      if (video_guia) tamanoTotal += video_guia.size;
+      archivos.forEach((archivo) => {
+        tamanoTotal += archivo.size;
+      });
+
+      // Convertir a MB con dos decimales
+      tamanoTotal = Number((tamanoTotal / (1024 * 1024)).toFixed(2));
+
+      const dataset = new Dataset({
+        nombre: nombre,
+        descripcion: descripcion,
+        foto: foto ? `/uploads/dataset-images/${foto.filename}` : null,
+        video_guia: video_guia
+          ? `/uploads/dataset-videos/${video_guia.filename}`
+          : null,
+        archivos: archivos.map(
+          (archivo) => `/uploads/dataset-files/${archivo.filename}`
+        ),
+        estado: "pendiente",
+        tamano: tamanoTotal, // En bytes
+        descargas: 0, // Inicializar en 0
+        creadorId: creadorId,
+      });
+
+      await dataset.save();
+
+      // Cra referencia en Neo4j
+      try {
+        await createDatasetReferenceInNeo4j(dataset._id, creadorId);
+        console.log("✅ Referencia de dataSet creada en Neo4j");
+      } catch (neo4jError) {
+        console.error(
+          "⚠️ dataSet creado en MongoDB pero falló en Neo4j:",
+          neo4jError.message
+        );
+        // No fallamos la petición completa si Neo4j falla
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Dataset creado exitosamente",
+        dataset: dataset,
+      });
+    } catch (err) {
+      console.error("Error creando dataset:", err);
+
+      res.status(500).json({
+        success: false,
+        error: err.message,
+      });
+    }
   }
-});
+);
 
 // Listar todos los datasets
 router.get("/", async (req, res) => {
   try {
     const datasets = await Dataset.find()
-    .populate('creadorId', 'username nombreCompleto')
-    .sort({ fecha_inclusion: -1 });
+      .populate("creadorId", "username nombreCompleto")
+      .sort({ fecha_inclusion: -1 });
     res.json({
       success: true,
-      datasets: datasets
+      datasets: datasets,
     });
   } catch (err) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message 
+      error: err.message,
     });
   }
 });
@@ -114,17 +133,17 @@ router.get("/", async (req, res) => {
 router.get("/aprobados", async (req, res) => {
   try {
     const datasets = await Dataset.find({ estado: "aprobado" })
-      .populate('creadorId', 'username nombreCompleto')
+      .populate("creadorId", "username nombreCompleto")
       .sort({ fecha_inclusion: -1 });
-    
+
     res.json({
       success: true,
-      datasets: datasets
+      datasets: datasets,
     });
   } catch (err) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message 
+      error: err.message,
     });
   }
 });
@@ -133,93 +152,101 @@ router.get("/aprobados", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const dataset = await Dataset.findById(datasetId).populate('creadorId');
-    
+    const dataset = await Dataset.findById(datasetId).populate("creadorId");
+
     if (!dataset) {
-      return res.status(404).json({ error: 'Dataset no encontrado' });
+      return res.status(404).json({ error: "Dataset no encontrado" });
     }
-    
+
     res.json(dataset);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener el dataset' });
+    res.status(500).json({ error: "Error al obtener el dataset" });
   }
 });
 
 // Actualizar dataset
-router.put("/:id", uploadDataset.fields([
-  { name: 'foto', maxCount: 1 },
-  { name: 'video_guia', maxCount: 1 },
-  { name: 'archivos', maxCount: 10 }
-]), async (req, res) => {
-  try {
-    const { nombre, descripcion, estado } = req.body;
-    
-    const updateData = { nombre, descripcion };
-    if (estado) updateData.estado = estado;
+router.put(
+  "/:id",
+  uploadDataset.fields([
+    { name: "foto", maxCount: 1 },
+    { name: "video_guia", maxCount: 1 },
+    { name: "archivos", maxCount: 10 },
+  ]),
+  async (req, res) => {
+    try {
+      const { nombre, descripcion, estado } = req.body;
 
-    // Procesar archivos si se enviaron
-    if (req.files) {
-      const foto = req.files['foto'] ? req.files['foto'][0] : null;
-      const video_guia = req.files['video_guia'] ? req.files['video_guia'][0] : null;
-      const archivos = req.files['archivos'] ? req.files['archivos'] : [];
+      const updateData = { nombre, descripcion };
+      if (estado) updateData.estado = estado;
 
-      if (foto) updateData.foto = `/uploads/dataset-images/${foto.filename}`;
-      if (video_guia) updateData.video_guia = `/uploads/dataset-videos/${video_guia.filename}`;
-      if (archivos.length > 0) {
-        updateData.archivos = archivos.map(archivo => `/uploads/dataset-files/${archivo.filename}`);
+      // Procesar archivos si se enviaron
+      if (req.files) {
+        const foto = req.files["foto"] ? req.files["foto"][0] : null;
+        const video_guia = req.files["video_guia"]
+          ? req.files["video_guia"][0]
+          : null;
+        const archivos = req.files["archivos"] ? req.files["archivos"] : [];
+
+        if (foto) updateData.foto = `/uploads/dataset-images/${foto.filename}`;
+        if (video_guia)
+          updateData.video_guia = `/uploads/dataset-videos/${video_guia.filename}`;
+        if (archivos.length > 0) {
+          updateData.archivos = archivos.map(
+            (archivo) => `/uploads/dataset-files/${archivo.filename}`
+          );
+        }
       }
+
+      const dataset = await Dataset.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      if (!dataset) {
+        return res.status(404).json({
+          success: false,
+          error: "Dataset no encontrado",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Dataset actualizado exitosamente",
+        dataset: dataset,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        error: err.message,
+      });
     }
+  }
+);
+
+// Ruta para incrementar descargas
+router.post("/:id/download", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
 
     const dataset = await Dataset.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
+      datasetId,
+      { $inc: { descargas: 1 } },
+      { new: true }
     );
 
     if (!dataset) {
-      return res.status(404).json({
-        success: false,
-        error: "Dataset no encontrado"
-      });
+      return res.status(404).json({ error: "Dataset no encontrado" });
     }
 
     res.json({
       success: true,
-      message: "Dataset actualizado exitosamente",
-      dataset: dataset
+      nuevasDescargas: dataset.descargas,
     });
-  } catch (err) {
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
+  } catch (error) {
+    console.error("Error incrementando descargas:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
-});
-
-// Ruta para incrementar descargas
-router.post('/:id/download', async (req, res) => {
-    try {
-        const datasetId = req.params.id;
-        
-        const dataset = await Dataset.findByIdAndUpdate(
-            datasetId,
-            { $inc: { descargas: 1 } }, 
-            { new: true } 
-        );
-
-        if (!dataset) {
-            return res.status(404).json({ error: 'Dataset no encontrado' });
-        }
-
-        res.json({ 
-            success: true, 
-            nuevasDescargas: dataset.descargas 
-        });
-        
-    } catch (error) {
-        console.error('Error incrementando descargas:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
 });
 
 // Cambiar estado del dataset
@@ -230,7 +257,7 @@ router.patch("/:id/estado", async (req, res) => {
     if (!["pendiente", "aprobado", "desactivado"].includes(estado)) {
       return res.status(400).json({
         success: false,
-        error: "Estado no válido"
+        error: "Estado no válido",
       });
     }
 
@@ -243,24 +270,22 @@ router.patch("/:id/estado", async (req, res) => {
     if (!dataset) {
       return res.status(404).json({
         success: false,
-        error: "Dataset no encontrado"
+        error: "Dataset no encontrado",
       });
     }
 
     res.json({
       success: true,
       message: `Dataset ${estado} exitosamente`,
-      dataset: dataset
+      dataset: dataset,
     });
   } catch (err) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message 
+      error: err.message,
     });
   }
 });
-
-
 
 // Obtener comentarios de un dataset
 router.get("/:id/comments", async (req, res) => {
@@ -271,25 +296,27 @@ router.get("/:id/comments", async (req, res) => {
     // Obtener información de usuarios desde MongoDB
     const commentsWithUserData = await Promise.all(
       comments.map(async (comment) => {
-        const user = await User.findById(comment.userId).select('username nombreCompleto foto');
+        const user = await User.findById(comment.userId).select(
+          "username nombreCompleto foto"
+        );
         return {
           ...comment,
-          userName: user?.username || 'Usuario desconocido',
-          userFullName: user?.nombreCompleto || '',
-          userPhoto: user?.foto || null
+          userName: user?.username || "Usuario desconocido",
+          userFullName: user?.nombreCompleto || "",
+          userPhoto: user?.foto || null,
         };
       })
     );
 
     res.json({
       success: true,
-      comments: commentsWithUserData
+      comments: commentsWithUserData,
     });
   } catch (error) {
     console.error("Error obteniendo comentarios:", error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -303,7 +330,7 @@ router.post("/:id/comments", async (req, res) => {
     if (!userId || !content) {
       return res.status(400).json({
         success: false,
-        error: "Usuario y contenido son requeridos"
+        error: "Usuario y contenido son requeridos",
       });
     }
 
@@ -312,7 +339,7 @@ router.post("/:id/comments", async (req, res) => {
     if (!dataset) {
       return res.status(404).json({
         success: false,
-        error: "Dataset no encontrado"
+        error: "Dataset no encontrado",
       });
     }
 
@@ -321,7 +348,7 @@ router.post("/:id/comments", async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: "Usuario no encontrado"
+        error: "Usuario no encontrado",
       });
     }
 
@@ -336,7 +363,7 @@ router.post("/:id/comments", async (req, res) => {
     const userData = {
       username: user.username,
       nombreCompleto: user.nombreCompleto,
-      foto: user.foto
+      foto: user.foto,
     };
 
     res.status(201).json({
@@ -348,15 +375,14 @@ router.post("/:id/comments", async (req, res) => {
         content: content,
         userName: user.username,
         userFullName: user.nombreCompleto,
-        userPhoto: user.foto
-      }
+        userPhoto: user.foto,
+      },
     });
-
   } catch (error) {
     console.error("Error creando comentario:", error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -370,16 +396,178 @@ router.patch("/comments/:commentId/hide", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Comentario ocultado exitosamente"
+      message: "Comentario ocultado exitosamente",
     });
   } catch (error) {
     console.error("Error ocultando comentario:", error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
 
+// Obtener votos de un dataset
+router.get("/:id/votes", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const votes = await getDatasetVotes(datasetId);
+
+    // Obtener información de usuarios desde MongoDB
+    const votesWithUserData = await Promise.all(
+      votes.map(async (vote) => {
+        const user = await User.findById(vote.userId).select(
+          "username nombreCompleto foto"
+        );
+        return {
+          ...vote,
+          userName: user?.username || "Usuario desconocido",
+          userFullName: user?.nombreCompleto || "",
+          userPhoto: user?.foto || null,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      votes: votesWithUserData,
+    });
+  } catch (error) {
+    console.error("Error obteniendo votos:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Obtener voto del usuario actual en un dataset
+router.get("/:id/my-vote", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const userId = req.body.userId; // Asumiendo que el userId viene en el body
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: "Usuario no especificado",
+      });
+    }
+
+    const vote = await getUserVote(userId, datasetId);
+
+    res.json({
+      success: true,
+      vote: vote,
+    });
+  } catch (error) {
+    console.error("Error obteniendo voto del usuario:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Crear o actualizar voto en un dataset
+router.post("/:id/votes", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const { userId, voteType } = req.body;
+
+    if (!userId || !voteType) {
+      return res.status(400).json({
+        success: false,
+        error: "Usuario y tipo de voto son requeridos",
+      });
+    }
+
+    // Validar que el tipo de voto sea válido
+    const validVoteTypes = [
+      "Me encanta",
+      "Me gusta",
+      "No me gusta",
+      "Me desagrada",
+    ];
+    if (!validVoteTypes.includes(voteType)) {
+      return res.status(400).json({
+        success: false,
+        error: "Tipo de voto no válido",
+      });
+    }
+
+    // Verificar que el dataset existe
+    const dataset = await Dataset.findById(datasetId);
+    if (!dataset) {
+      return res.status(404).json({
+        success: false,
+        error: "Dataset no encontrado",
+      });
+    }
+
+    // Verificar que el usuario existe
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Usuario no encontrado",
+      });
+    }
+
+    // Crear o actualizar voto en Neo4j
+    const vote = await createOrUpdateVote(userId, datasetId, voteType);
+
+    if (!vote) {
+      throw new Error("Error al crear/actualizar el voto");
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Voto registrado exitosamente",
+      vote: {
+        userId: userId,
+        voteType: voteType,
+        timestamp: vote.timestamp,
+        userName: user.username,
+        userFullName: user.nombreCompleto,
+        userPhoto: user.foto,
+      },
+    });
+  } catch (error) {
+    console.error("Error creando/actualizando voto:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Eliminar voto de un usuario
+router.delete("/:id/votes", async (req, res) => {
+  try {
+    const datasetId = req.params.id;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: "Usuario no especificado",
+      });
+    }
+
+    await removeVote(userId, datasetId);
+
+    res.json({
+      success: true,
+      message: "Voto eliminado exitosamente",
+    });
+  } catch (error) {
+    console.error("Error eliminando voto:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 
 export default router;
