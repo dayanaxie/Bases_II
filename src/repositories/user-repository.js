@@ -7,7 +7,10 @@ import {
     isFollowing, 
     getFollowers, 
     getFollowing,
-    createUserReferenceInNeo4j 
+    createUserReferenceInNeo4j ,
+    sendMessage,
+    getMessagesBetweenUsers,
+    hasMessagesBetween
 } from '../config/neo4j.js';
 import DatasetRepository from './dataset-repository.js';
 import mongoose from 'mongoose';
@@ -210,6 +213,115 @@ class UserRepository extends BaseRepository {
         
         console.log('Follow relationship removed and cache invalidated');
         return result;
+    }
+
+    async getConversation(currentUserId, otherUserId) {
+        const cacheKey = `conversation:${currentUserId}:${otherUserId}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            // Verify if messages exist between these users
+            const hasMessages = await hasMessagesBetween(currentUserId, otherUserId);
+            
+            if (!hasMessages) {
+                return {
+                    messages: [],
+                    hasMessages: false,
+                    message: 'No hay mensajes entre estos usuarios'
+                };
+            }
+
+            // Get the complete conversation from Neo4j
+            const messages = await getMessagesBetweenUsers(currentUserId, otherUserId);
+
+            // Format messages for frontend
+            const formattedMessages = messages.map(msg => ({
+                _id: msg._id,
+                content: msg.content,
+                sender: msg.sender,
+                receiver: msg.receiver,
+                timestamp: msg.timestamp,
+                read: msg.read
+            }));
+
+            return {
+                messages: formattedMessages,
+                hasMessages: true,
+                count: formattedMessages.length,
+                source: 'neo4j'
+            };
+        }, 300); // 5 minutes TTL for conversation cache
+    }
+
+    async sendMessage(content, sender, receiver, messageId = null) {
+        // Validate input
+        if (!content || !sender || !receiver) {
+            throw new Error('Contenido, remitente y destinatario son requeridos');
+        }
+
+        if (content.trim().length === 0) {
+            throw new Error('El mensaje no puede estar vacío');
+        }
+
+        // Verify that users exist
+        const [senderUser, receiverUser] = await Promise.all([
+            this.getUserById(sender),
+            this.getUserById(receiver)
+        ]);
+
+        if (!senderUser || !receiverUser) {
+            throw new Error('Usuario remitente o destinatario no encontrado');
+        }
+
+        // Generate message ID if not provided
+        const finalMessageId = messageId || new mongoose.Types.ObjectId().toString();
+
+        // Send message to Neo4j
+        await sendMessage(sender, receiver, content.trim(), finalMessageId);
+
+        // Format response
+        const responseMessage = {
+            _id: finalMessageId,
+            content: content.trim(),
+            sender: sender,
+            receiver: receiver,
+            timestamp: new Date(),
+            read: false
+        };
+
+        // Invalidate conversation cache for both users
+        await Promise.all([
+            this.invalidateCache(`conversation:${sender}:${receiver}`),
+            this.invalidateCache(`conversation:${receiver}:${sender}`),
+            this.invalidatePattern(`conversation:*:${sender}`),
+            this.invalidatePattern(`conversation:*:${receiver}`)
+        ]);
+
+        console.log('Message sent and cache invalidated');
+        return responseMessage;
+    }
+
+    async hasMessagesBetween(userId1, userId2) {
+        const cacheKey = `hasMessages:${userId1}:${userId2}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await hasMessagesBetween(userId1, userId2);
+        }, 600);
+    }
+
+    async getMessagesBetweenUsers(userId1, userId2) {
+        const cacheKey = `messages:${userId1}:${userId2}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await getMessagesBetweenUsers(userId1, userId2);
+        }, 300);
+    }
+
+    // Debug method to get all Neo4j messages
+    async getAllNeo4jMessages() {
+        // This method would need to be implemented in your neo4j.js config
+        // For now, I'll leave it as a placeholder
+        console.log('Debug method getAllNeo4jMessages not implemented');
+        return [];
     }
 
     async verifyUserPassword(email, password) {

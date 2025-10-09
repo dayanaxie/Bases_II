@@ -7,18 +7,6 @@ import jwt from 'jsonwebtoken';
 import { uploadUser } from "../config/multer.js";
 import UserRepository from '../repositories/user-repository.js';
 import mongoose from 'mongoose';
-import { 
-  createUserReferenceInNeo4j, 
-  followUser, 
-  unfollowUser, 
-  isFollowing, 
-  getFollowers, 
-  getFollowing,
-  sendMessage, 
-  getMessagesBetweenUsers, 
-  hasMessagesBetween,
-
-} from '../config/neo4j.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -570,8 +558,6 @@ router.get('/messages/users', async (req, res) => {
   }
 });
 
-
-// Obtener conversación entre dos usuarios DESDE NEO4J
 router.get('/messages/conversation/:otherUserId', async (req, res) => {
   try {
     const { otherUserId } = req.params;
@@ -587,43 +573,16 @@ router.get('/messages/conversation/:otherUserId', async (req, res) => {
       });
     }
 
-    // Verificar si existen mensajes entre estos usuarios en Neo4j
-    const hasMessages = await hasMessagesBetween(currentUserId, otherUserId);
-    console.log('¿Hay mensajes?', hasMessages);
-    
-    if (!hasMessages) {
-      return res.json({
-        success: true,
-        messages: [],
-        hasMessages: false,
-        message: 'No hay mensajes entre estos usuarios'
-      });
-    }
-
-    // Obtener la conversación completa desde Neo4j
-    const messages = await getMessagesBetweenUsers(currentUserId, otherUserId);
-    console.log('Mensajes obtenidos:', messages.length);
-
-    // Formatear los mensajes para el frontend
-    const formattedMessages = messages.map(msg => ({
-      _id: msg._id,
-      content: msg.content,
-      sender: msg.sender,
-      receiver: msg.receiver,
-      timestamp: msg.timestamp,
-      read: msg.read
-    }));
+    // Use repository to get conversation
+    const conversation = await userRepo.getConversation(currentUserId, otherUserId);
 
     res.json({
       success: true,
-      messages: formattedMessages,
-      hasMessages: true,
-      count: formattedMessages.length,
-      source: 'neo4j'
+      ...conversation
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo conversación desde Neo4j:', error);
+    console.error('❌ Error obteniendo conversación:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor al cargar la conversación',
@@ -632,59 +591,17 @@ router.get('/messages/conversation/:otherUserId', async (req, res) => {
   }
 });
 
-// Enviar mensaje Y GUARDAR EN NEO4J
+// Enviar mensaje
 router.post('/messages/send', async (req, res) => {
   try {
     const { content, sender, receiver } = req.body;
 
     console.log('📤 Enviando mensaje:', { sender, receiver, content });
 
-    // Validaciones
-    if (!content || !sender || !receiver) {
-      return res.status(400).json({
-        success: false,
-        message: 'Contenido, remitente y destinatario son requeridos'
-      });
-    }
+    // Use repository to send message
+    const responseMessage = await userRepo.sendMessage(content, sender, receiver);
 
-    if (content.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'El mensaje no puede estar vacío'
-      });
-    }
-
-    // Verificar que los usuarios existan
-    //const senderUser = await User.findById(sender);
-    //const receiverUser = await User.findById(receiver);
-
-    const senderUser = await userRepo.getUserById(sender);
-    const receiverUser = await userRepo.getUserById(receiver);
-
-    if (!senderUser || !receiverUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuario remitente o destinatario no encontrado'
-      });
-    }
-
-    // Generar ID único para el mensaje
-    const messageId = new mongoose.Types.ObjectId();
-
-    // Enviar el mensaje a Neo4j
-    await sendMessage(sender, receiver, content.trim(), messageId);
-
-    // Formatear respuesta
-    const responseMessage = {
-      _id: messageId.toString(),
-      content: content.trim(),
-      sender: sender,
-      receiver: receiver,
-      timestamp: new Date(),
-      read: false
-    };
-
-    console.log('✅ Mensaje guardado en Neo4j:', responseMessage._id);
+    console.log('✅ Mensaje enviado:', responseMessage._id);
 
     res.json({
       success: true,
@@ -694,7 +611,23 @@ router.post('/messages/send', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error enviando mensaje a Neo4j:', error);
+    console.error('❌ Error enviando mensaje:', error);
+    
+    // Handle specific error types
+    if (error.message.includes('requeridos') || error.message.includes('vacío')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    if (error.message.includes('no encontrado')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor al enviar el mensaje',
@@ -706,27 +639,7 @@ router.post('/messages/send', async (req, res) => {
 // Endpoint de debug para ver todos los mensajes en Neo4j
 router.get('/debug/neo4j-messages', async (req, res) => {
   try {
-    const session = driver.session();
-    
-    const result = await session.run(`
-      MATCH (u1:User)-[r:MESSAGE]->(u2:User)
-      RETURN u1.mongoId as sender, 
-             u2.mongoId as receiver, 
-             r.content as content,
-             r.timestamp as timestamp,
-             r.messageId as messageId
-      ORDER BY r.timestamp DESC
-    `);
-    
-    const messages = result.records.map(record => ({
-      sender: record.get('sender'),
-      receiver: record.get('receiver'),
-      content: record.get('content'),
-      timestamp: record.get('timestamp'),
-      messageId: record.get('messageId')
-    }));
-    
-    await session.close();
+    const messages = await userRepo.getAllNeo4jMessages();
     
     res.json({
       success: true,

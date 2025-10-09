@@ -3,9 +3,17 @@ import BaseRepository from './base-repository.js';
 import { DatasetQueries } from '../config/mongo-queries.js';
 import { 
   createDatasetReferenceInNeo4j,
+  createComment,
+  getDatasetComments,
+  hideComment,
   createOrUpdateVote,
-  getDatasetVotes//,
-  //getUserDatasets
+  getUserVote,
+  getDatasetVotes,
+  removeVote,
+  createReply,
+  getCommentReplies,
+  getDatasetCommentsWithReplies,
+  hideReply
 } from '../config/neo4j.js';
 
 class DatasetRepository extends BaseRepository {
@@ -45,13 +53,11 @@ class DatasetRepository extends BaseRepository {
         
         return await this.cachedOperation(cacheKey, async () => {
             const dataset = await this.getDatasetById(datasetId);
-            let isFollowing = false;
             let voteCount = 0;
             
             if (userId) {
-                [isFollowing, voteCount, followers] = await Promise.all([
-                    this.getDatasetVotes(datasetId)/*,
-                    this.getDatasetFollowers(datasetId)*/
+                [voteCount] = await Promise.all([
+                    this.getDatasetVotes(datasetId)
                 ]);
             } else {
                 [voteCount] = await Promise.all([
@@ -61,7 +67,6 @@ class DatasetRepository extends BaseRepository {
             
             return {
                 ...dataset.toObject(),
-                isFollowing,
                 voteCount
             };
         }, 300);
@@ -74,23 +79,117 @@ class DatasetRepository extends BaseRepository {
             return await getDatasetVotes(datasetId);
         }, 300);
     }
-/*
-    async getUserDatasets(userId) {
-        const cacheKey = `user:datasets:${userId}`;
+
+    // COMMENTS operations
+    async getDatasetComments(datasetId) {
+        const cacheKey = `dataset:comments:${datasetId}`;
         
         return await this.cachedOperation(cacheKey, async () => {
-            const datasetIds = await getUserDatasets(userId);
-            if (datasetIds.length === 0) return [];
-            
-            // Get full dataset data from MongoDB
-            const datasets = await Promise.all(
-                datasetIds.map(id => this.getDatasetById(id))
-            );
-            
-            return datasets.filter(dataset => dataset !== null);
+            return await getDatasetComments(datasetId);
         }, 300);
     }
-*/
+
+    async getDatasetCommentsWithReplies(datasetId) {
+        const cacheKey = `dataset:comments:replies:${datasetId}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await getDatasetCommentsWithReplies(datasetId);
+        }, 300);
+    }
+
+    async getCommentReplies(commentId, datasetId) {
+        const cacheKey = `comment:replies:${commentId}:${datasetId}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await getCommentReplies(commentId, datasetId);
+        }, 300);
+    }
+
+    async createComment(userId, datasetId, content) {
+        const comment = await createComment(userId, datasetId, content);
+        
+        // Invalidate comments cache
+        await Promise.all([
+            this.invalidateCache(`dataset:comments:${datasetId}`),
+            this.invalidateCache(`dataset:comments:replies:${datasetId}`)
+        ]);
+        
+        console.log('✅ Comment created and cache invalidated');
+        return comment;
+    }
+
+    async createReply(userId, commentId, content, datasetId) {
+        const reply = await createReply(userId, commentId, content, datasetId);
+        
+        // Invalidate comments and replies cache
+        await Promise.all([
+            this.invalidateCache(`dataset:comments:${datasetId}`),
+            this.invalidateCache(`dataset:comments:replies:${datasetId}`),
+            this.invalidateCache(`comment:replies:${commentId}:${datasetId}`)
+        ]);
+        
+        console.log('✅ Reply created and cache invalidated');
+        return reply;
+    }
+
+    async hideComment(commentId) {
+        await hideComment(commentId);
+        
+        // Note: We can't easily invalidate specific dataset caches here
+        // so we'll invalidate all comment-related patterns
+        await this.invalidatePattern('dataset:comments:*');
+        await this.invalidatePattern('dataset:comments:replies:*');
+        await this.invalidatePattern('comment:replies:*');
+        
+        console.log('✅ Comment hidden and cache invalidated');
+    }
+
+    async hideReply(replyId) {
+        await hideReply(replyId);
+        
+        // Invalidate all reply-related caches
+        await this.invalidatePattern('dataset:comments:replies:*');
+        await this.invalidatePattern('comment:replies:*');
+        
+        console.log('✅ Reply hidden and cache invalidated');
+    }
+
+    // VOTES operations
+    async getUserVote(userId, datasetId) {
+        const cacheKey = `user:vote:${userId}:${datasetId}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await getUserVote(userId, datasetId);
+        }, 300);
+    }
+
+    async createOrUpdateVote(userId, datasetId, voteType) {
+        const vote = await createOrUpdateVote(userId, datasetId, voteType);
+        
+        // Invalidate relevant cache
+        await Promise.all([
+            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
+            this.invalidateCache(`dataset:votes:${datasetId}`),
+            this.invalidateCache(`user:vote:${userId}:${datasetId}`)
+        ]);
+        
+        console.log('✅ Dataset vote recorded and cache invalidated');
+        return vote;
+    }
+
+    async removeVote(userId, datasetId) {
+        await removeVote(userId, datasetId);
+        
+        // Invalidate relevant cache
+        await Promise.all([
+            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
+            this.invalidateCache(`dataset:votes:${datasetId}`),
+            this.invalidateCache(`user:vote:${userId}:${datasetId}`)
+        ]);
+        
+        console.log('✅ Vote removed and cache invalidated');
+    }
+
     // WRITE operations with cache invalidation
     async createDataset(datasetData) {
         const dataset = await DatasetQueries.create(datasetData);
@@ -156,48 +255,6 @@ class DatasetRepository extends BaseRepository {
         }
 
         return updatedDataset;
-    }
-
-    /*
-    async followDataset(userId, datasetId) {
-        const result = await followDataset(userId, datasetId);
-        
-        // Invalidate relevant cache
-        await Promise.all([
-            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
-            this.invalidateCache(`userFollowsDataset:${userId}:${datasetId}`),
-            this.invalidateCache(`dataset:followers:${datasetId}`)
-        ]);
-        
-        console.log('✅ Dataset follow relationship created and cache invalidated');
-        return result;
-    }
-
-    async unfollowDataset(userId, datasetId) {
-        const result = await unfollowDataset(userId, datasetId);
-        
-        // Invalidate relevant cache
-        await Promise.all([
-            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
-            this.invalidateCache(`userFollowsDataset:${userId}:${datasetId}`),
-            this.invalidateCache(`dataset:followers:${datasetId}`)
-        ]);
-        
-        console.log('✅ Dataset unfollow relationship created and cache invalidated');
-        return result;
-    }*/
-
-    async createOrUpdateVote(userId, datasetId, voteType = 'like') {
-        const result = await createOrUpdateVote(userId, datasetId, voteType);
-        
-        // Invalidate relevant cache
-        await Promise.all([
-            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
-            this.invalidateCache(`dataset:votes:${datasetId}`)
-        ]);
-        
-        console.log('✅ Dataset vote recorded and cache invalidated');
-        return result;
     }
 }
 

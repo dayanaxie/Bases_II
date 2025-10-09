@@ -3,20 +3,6 @@ import express from "express";
 import Dataset from "../models/Dataset.js";
 import User from "../models/User.js";
 import { uploadDataset } from "../config/multer.js";
-import {
-  createDatasetReferenceInNeo4j,
-  createComment,
-  getDatasetComments,
-  hideComment,
-  createOrUpdateVote,
-  getUserVote,
-  getDatasetVotes,
-  removeVote,
-  createReply,
-  getCommentReplies,
-  getDatasetCommentsWithReplies,
-  hideReply
-} from "../config/neo4j.js";
 import DatasetRepository from '../repositories/dataset-repository.js';
 import mongoose from 'mongoose';
 
@@ -38,22 +24,19 @@ router.post(
       console.log("Archivos recibidos para dataset:", req.files);
       console.log("Datos recibidos:", req.body);
 
-      const { nombre, descripcion } = req.body;
+      const { nombre, descripcion, creadorId } = req.body;
 
       // Validaciones
-      if (!nombre || !descripcion) {
+      if (!nombre || !descripcion || !creadorId) {
+        // Clean up uploaded files if validation fails
+        if (req.files) {
+          Object.values(req.files).flat().forEach(file => {
+            fs.unlinkSync(file.path);
+          });
+        }
         return res.status(400).json({
           success: false,
-          error: "Nombre y descripción son obligatorios",
-        });
-      }
-
-      const creadorId = req.body.creadorId;
-
-      if (!creadorId) {
-        return res.status(400).json({
-          success: false,
-          error: "ID de usuario creador es requerido",
+          error: "Nombre, descripción y creadorId son obligatorios",
         });
       }
 
@@ -75,7 +58,7 @@ router.post(
       // Convertir a MB con dos decimales
       tamanoTotal = Number((tamanoTotal / (1024 * 1024)).toFixed(2));
 
-      const dataset = new Dataset({
+      const datasetData = {
         nombre: nombre,
         descripcion: descripcion,
         foto: foto ? `/uploads/dataset-images/${foto.filename}` : null,
@@ -86,30 +69,13 @@ router.post(
           (archivo) => `/uploads/dataset-files/${archivo.filename}`
         ),
         estado: "pendiente",
-        tamano: tamanoTotal, // En bytes
-        descargas: 0, // Inicializar en 0
+        tamano: tamanoTotal,
+        descargas: 0,
         creadorId: creadorId,
-      });
+      };
 
-
-      
       // Crear dataset usando repository
-      // const dataset = await datasetRepo.createDataset(datasetData);
-
-
-      await dataset.save();
-
-      // Cra referencia en Neo4j
-      try {
-        await createDatasetReferenceInNeo4j(dataset._id, creadorId);
-        console.log("✅ Referencia de dataSet creada en Neo4j");
-      } catch (neo4jError) {
-        console.error(
-          "⚠️ dataSet creado en MongoDB pero falló en Neo4j:",
-          neo4jError.message
-        );
-        // No fallamos la petición completa si Neo4j falla
-      }
+      const dataset = await datasetRepo.createDataset(datasetData);
 
       res.status(201).json({
         success: true,
@@ -117,8 +83,14 @@ router.post(
         dataset: dataset,
       });
     } catch (err) {
+      // Clean up uploaded files on error
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          fs.unlinkSync(file.path);
+        });
+      }
+      
       console.error("Error creando dataset:", err);
-
       res.status(500).json({
         success: false,
         error: err.message,
@@ -130,12 +102,7 @@ router.post(
 // Listar todos los datasets
 router.get("/", async (req, res) => {
   try {
-    const datasets = await Dataset.find()
-      .populate("creadorId", "username nombreCompleto")
-      .sort({ fecha_inclusion: -1 });
-
-    // Usando respositorio
-    // const datasets = await datasetRepo.getAllDatasets();
+    const datasets = await datasetRepo.getAllDatasets();
     
     res.json({
       success: true,
@@ -152,12 +119,7 @@ router.get("/", async (req, res) => {
 // Listar todos los datasets aprobados
 router.get("/aprobados", async (req, res) => {
   try {
-    const datasets = await Dataset.find({ estado: "aprobado" })
-      .populate("creadorId", "username nombreCompleto")
-      .sort({ fecha_inclusion: -1 });
-
-    // Usando repositorio
-    // const datasets = await datasetRepo.getApprovedDatasets();
+    const datasets = await datasetRepo.getApprovedDatasets();
     
     res.json({
       success: true,
@@ -175,10 +137,7 @@ router.get("/aprobados", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const dataset = await Dataset.findById(datasetId).populate("creadorId");
-
-    // Usando repositorio
-    // const dataset = await datasetRepo.getDatasetById(datasetId);
+    const dataset = await datasetRepo.getDatasetById(datasetId);
     
     if (!dataset) {
       return res.status(404).json({ error: "Dataset no encontrado" });
@@ -223,13 +182,15 @@ router.put(
         }
       }
 
-      const dataset = await Dataset.findByIdAndUpdate(
-        req.params.id,
-        updateData,
-        { new: true, runValidators: true }
-      );
+      const dataset = await datasetRepo.updateDataset(req.params.id, updateData);
 
       if (!dataset) {
+        // Clean up uploaded files if dataset not found
+        if (req.files) {
+          Object.values(req.files).flat().forEach(file => {
+            fs.unlinkSync(file.path);
+          });
+        }
         return res.status(404).json({
           success: false,
           error: "Dataset no encontrado",
@@ -242,6 +203,12 @@ router.put(
         dataset: dataset,
       });
     } catch (err) {
+      // Clean up uploaded files on error
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          fs.unlinkSync(file.path);
+        });
+      }
       res.status(500).json({
         success: false,
         error: err.message,
@@ -254,14 +221,7 @@ router.put(
 router.post("/:id/download", async (req, res) => {
   try {
     const datasetId = req.params.id;
-
-    const dataset = await Dataset.findByIdAndUpdate(
-      datasetId,
-      { $inc: { descargas: 1 } },
-      { new: true }
-    );
-    // Actualizar dataset usando repository
-    // const dataset = await datasetRepo.updateDataset(req.params.id, updateData);
+    const dataset = await datasetRepo.incrementDownloads(datasetId);
 
     if (!dataset) {
       return res.status(404).json({ error: "Dataset no encontrado" });
@@ -276,7 +236,6 @@ router.post("/:id/download", async (req, res) => {
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
-
 
 // Cambiar estado del dataset
 router.patch("/:id/estado", async (req, res) => {
@@ -316,7 +275,7 @@ router.patch("/:id/estado", async (req, res) => {
 router.get("/:id/comments", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const comments = await getDatasetComments(datasetId);
+    const comments = await datasetRepo.getDatasetComments(datasetId);
 
     // Obtener información de usuarios desde MongoDB
     const commentsWithUserData = await Promise.all(
@@ -369,7 +328,7 @@ router.post("/:id/comments", async (req, res) => {
     }
 
     // Verificar que el usuario existe
-    const user = await User.findById(userId); // ✅ AHORA User ESTÁ DEFINIDO
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -377,19 +336,8 @@ router.post("/:id/comments", async (req, res) => {
       });
     }
 
-    // Crear comentario en Neo4j
-    const comment = await createComment(userId, datasetId, content);
-
-    if (!comment) {
-      throw new Error("Error al crear el comentario");
-    }
-
-    // Obtener información del usuario para la respuesta
-    const userData = {
-      username: user.username,
-      nombreCompleto: user.nombreCompleto,
-      foto: user.foto,
-    };
+    // Crear comentario usando repository
+    const comment = await datasetRepo.createComment(userId, datasetId, content);
 
     res.status(201).json({
       success: true,
@@ -416,8 +364,7 @@ router.post("/:id/comments", async (req, res) => {
 router.patch("/comments/:commentId/hide", async (req, res) => {
   try {
     const { commentId } = req.params;
-
-    await hideComment(commentId);
+    await datasetRepo.hideComment(commentId);
 
     res.json({
       success: true,
@@ -432,13 +379,11 @@ router.patch("/comments/:commentId/hide", async (req, res) => {
   }
 });
 
-
-
 // Obtener votos de un dataset
 router.get("/:id/votes", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const votes = await getDatasetVotes(datasetId);
+    const votes = await datasetRepo.getDatasetVotes(datasetId);
 
     // Obtener información de usuarios desde MongoDB
     const votesWithUserData = await Promise.all(
@@ -472,7 +417,7 @@ router.get("/:id/votes", async (req, res) => {
 router.get("/:id/my-vote", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const userId = req.body.userId; // Asumiendo que el userId viene en el body
+    const userId = req.body.userId;
 
     if (!userId) {
       return res.status(400).json({
@@ -481,7 +426,7 @@ router.get("/:id/my-vote", async (req, res) => {
       });
     }
 
-    const vote = await getUserVote(userId, datasetId);
+    const vote = await datasetRepo.getUserVote(userId, datasetId);
 
     res.json({
       success: true,
@@ -541,12 +486,8 @@ router.post("/:id/votes", async (req, res) => {
       });
     }
 
-    // Crear o actualizar voto en Neo4j
-    const vote = await createOrUpdateVote(userId, datasetId, voteType);
-
-    if (!vote) {
-      throw new Error("Error al crear/actualizar el voto");
-    }
+    // Crear o actualizar voto usando repository
+    const vote = await datasetRepo.createOrUpdateVote(userId, datasetId, voteType);
 
     res.status(201).json({
       success: true,
@@ -582,7 +523,7 @@ router.delete("/:id/votes", async (req, res) => {
       });
     }
 
-    await removeVote(userId, datasetId);
+    await datasetRepo.removeVote(userId, datasetId);
 
     res.json({
       success: true,
@@ -597,22 +538,17 @@ router.delete("/:id/votes", async (req, res) => {
   }
 });
 
-
-
-
 // Obtener comentarios con respuestas
 router.get("/:id/comments-with-replies", async (req, res) => {
   try {
     const datasetId = req.params.id;
-    const comments = await getDatasetCommentsWithReplies(datasetId);
+    const comments = await datasetRepo.getDatasetCommentsWithReplies(datasetId);
 
     // Obtener información de usuarios desde MongoDB para comentarios y respuestas
     const commentsWithUserData = await Promise.all(
       comments.map(async (comment) => {
-        // Información del usuario que hizo el comentario
         const commentUser = await User.findById(comment.userId).select('username nombreCompleto foto');
         
-        // Información de usuarios que hicieron respuestas
         const repliesWithUserData = await Promise.all(
           comment.replies.map(async (reply) => {
             const replyUser = await User.findById(reply.userId).select('username nombreCompleto foto');
@@ -661,9 +597,8 @@ router.get("/comments/:commentId/replies", async (req, res) => {
       });
     }
 
-    const replies = await getCommentReplies(commentId, datasetId);
+    const replies = await datasetRepo.getCommentReplies(commentId, datasetId);
 
-    // Obtener información de usuarios desde MongoDB
     const repliesWithUserData = await Promise.all(
       replies.map(async (reply) => {
         const user = await User.findById(reply.userId).select('username nombreCompleto foto');
@@ -720,22 +655,8 @@ router.post("/comments/:commentId/replies", async (req, res) => {
       });
     }
 
-    // Verificar que el comentario existe
-    const comments = await getDatasetComments(datasetId);
-    const commentExists = comments.some(comment => comment.commentId === commentId);
-    if (!commentExists) {
-      return res.status(404).json({
-        success: false,
-        error: "Comentario no encontrado"
-      });
-    }
-
-    // Crear respuesta en Neo4j
-    const reply = await createReply(userId, commentId, content, datasetId);
-
-    if (!reply) {
-      throw new Error("Error al crear la respuesta");
-    }
+    // Crear respuesta usando repository
+    const reply = await datasetRepo.createReply(userId, commentId, content, datasetId);
 
     res.status(201).json({
       success: true,
@@ -763,8 +684,7 @@ router.post("/comments/:commentId/replies", async (req, res) => {
 router.patch("/replies/:replyId/hide", async (req, res) => {
   try {
     const { replyId } = req.params;
-
-    await hideReply(replyId);
+    await datasetRepo.hideReply(replyId);
 
     res.json({
       success: true,
@@ -779,7 +699,4 @@ router.patch("/replies/:replyId/hide", async (req, res) => {
   }
 });
 
-
-
-
-export default router; 
+export default router;
