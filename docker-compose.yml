@@ -227,23 +227,17 @@ services:
   # --------------------------
   app:
     build: .
-    command: node --inspect=0.0.0.0:9229 src/app.js
     container_name: node_app
     restart: always
     environment:
       - MONGO_URI=mongodb://root:rootpass@mongo1:27017,mongo2:27017/appdb?replicaSet=rs0&authSource=admin
     ports:
       - "${PORT}:3000"
-      - "9229:9229"  # Puerto para Node.js Inspector
-    depends_on:
-      #mongo1:
-      #  condition: service_healthy
-      #mongo2:
-      #  condition: service_healthy
-      redis-master:
-        condition: service_started
-      redis-replica:
-        condition: service_started
+    #depends_on:
+    #  mongo1:
+    #    condition: service_healthy
+    #  mongo2:
+    #    condition: service_healthy
     env_file:
       - .env
     volumes:

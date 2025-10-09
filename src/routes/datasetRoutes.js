@@ -1,4 +1,3 @@
-// datasetRoutes.js
 import express from "express";
 import Dataset from "../models/Dataset.js";
 import User from "../models/User.js";
@@ -17,14 +16,8 @@ import {
   getDatasetCommentsWithReplies,
   hideReply
 } from "../config/neo4j.js";
-import { uploadDataset } from "../config/multer.js";
-import DatasetRepository from '../repositories/dataset-repository.js';
-import mongoose from 'mongoose';
 
 const router = express.Router();
-
-// Initialize repository
-const datasetRepo = new DatasetRepository(mongoose);
 
 // Crear dataset con múltiples archivos
 router.post(
@@ -92,12 +85,6 @@ router.post(
         creadorId: creadorId,
       });
 
-
-      
-      // Crear dataset usando repository
-      // const dataset = await datasetRepo.createDataset(datasetData);
-
-
       await dataset.save();
 
       // Cra referencia en Neo4j
@@ -134,10 +121,6 @@ router.get("/", async (req, res) => {
     const datasets = await Dataset.find()
       .populate("creadorId", "username nombreCompleto")
       .sort({ fecha_inclusion: -1 });
-
-    // Usando respositorio
-    // const datasets = await datasetRepo.getAllDatasets();
-    
     res.json({
       success: true,
       datasets: datasets,
@@ -157,9 +140,6 @@ router.get("/aprobados", async (req, res) => {
       .populate("creadorId", "username nombreCompleto")
       .sort({ fecha_inclusion: -1 });
 
-    // Usando repositorio
-    // const datasets = await datasetRepo.getApprovedDatasets();
-    
     res.json({
       success: true,
       datasets: datasets,
@@ -178,9 +158,6 @@ router.get("/:id", async (req, res) => {
     const datasetId = req.params.id;
     const dataset = await Dataset.findById(datasetId).populate("creadorId");
 
-    // Usando repositorio
-    // const dataset = await datasetRepo.getDatasetById(datasetId);
-    
     if (!dataset) {
       return res.status(404).json({ error: "Dataset no encontrado" });
     }
@@ -261,8 +238,6 @@ router.post("/:id/download", async (req, res) => {
       { $inc: { descargas: 1 } },
       { new: true }
     );
-    // Actualizar dataset usando repository
-    // const dataset = await datasetRepo.updateDataset(req.params.id, updateData);
 
     if (!dataset) {
       return res.status(404).json({ error: "Dataset no encontrado" });
@@ -278,7 +253,6 @@ router.post("/:id/download", async (req, res) => {
   }
 });
 
-
 // Cambiar estado del dataset
 router.patch("/:id/estado", async (req, res) => {
   try {
@@ -291,7 +265,11 @@ router.patch("/:id/estado", async (req, res) => {
       });
     }
 
-    const dataset = await datasetRepo.updateDatasetState(req.params.id, estado);
+    const dataset = await Dataset.findByIdAndUpdate(
+      req.params.id,
+      { estado: estado },
+      { new: true }
+    );
 
     if (!dataset) {
       return res.status(404).json({
@@ -432,6 +410,7 @@ router.patch("/comments/:commentId/hide", async (req, res) => {
     });
   }
 });
+
 
 
 
@@ -783,4 +762,4 @@ router.patch("/replies/:replyId/hide", async (req, res) => {
 
 
 
-export default router; 
+export default router;

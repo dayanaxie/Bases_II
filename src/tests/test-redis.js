@@ -22,9 +22,9 @@ async function testRedis() {
             const data = await redisClient.read('test');
             console.log('Retrieved data:', data);
             
-            console.log('Redis test passed!');
+            console.log('✅ Redis test passed!');
         } else {
-            console.log('Redis health check failed');
+            console.log('❌ Redis health check failed');
         }
         
     } catch (error) {

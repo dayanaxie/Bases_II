@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-//import initAdmin from './initAdmin.js'; // Archivo separado
+import initAdmin from './initAdmin.js'; // Archivo separado
 
 dotenv.config();
 
@@ -10,12 +10,12 @@ const connectMongo = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
-    console.log("Conectado a MongoDB");
+    console.log("✅ Conectado a MongoDB");
 
-    //await initAdmin();
+    await initAdmin();
 
   } catch (error) {
-    console.error("Error al conectar a MongoDB:", error);
+    console.error("❌ Error al conectar a MongoDB:", error);
     process.exit(1);
   }
 };
