@@ -400,7 +400,7 @@ class ProfileUser {
             // Mostrar loading
             this.showLoadingState('datasets');
             
-            const response = await fetch(`http://localhost:3000/api/datasets?creator=${this.currentUser._id}`, {
+            const response = await fetch(`http://localhost:3000/api/datasets/creador/${this.currentUser._id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
