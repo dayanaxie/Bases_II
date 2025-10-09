@@ -7,7 +7,7 @@ import userRoutes from "./routes/userRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import { requireAuth } from "./middleware/auth.js"; 
-
+import { initTestData } from "./tests/initTestData.js";
 
 dotenv.config();
 const app = express();
@@ -29,7 +29,7 @@ connectMongo();
 // Conexión a Neo4j
 testNeo4jConnection().then(connected => {
   if (connected) {
-    console.log('🚀 Neo4j listo para usar');
+    console.log('Neo4j listo para usar');
   }
 });
 
@@ -100,6 +100,7 @@ app.use('/uploads/dataset-videos', express.static(path.join(__dirname, 'uploads/
 app.use('/uploads/dataset-files', express.static(path.join(__dirname, 'uploads/dataset-files')));
 app.use('/uploads/profile-pictures', express.static(path.join(__dirname, 'uploads/profile-pictures')));
 
+await initTestData();
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);

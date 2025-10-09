@@ -1,12 +1,21 @@
 // dataset-repository.js
 import BaseRepository from './base-repository.js';
-import mongoose from 'mongoose';
+import { DatasetQueries } from '../config/mongo-queries.js';
+import { 
+  createDatasetReferenceInNeo4j,
+  isUserFollowingDataset,
+  followDataset,
+  unfollowDataset,
+  voteForDataset,
+  getDatasetVotes,
+  getDatasetFollowers,
+  getUserDatasets
+} from '../config/neo4j.js';
 
 class DatasetRepository extends BaseRepository {
     constructor(mongoClient, neo4jDriver) {
         super();
         this.mongo = mongoClient;
-        this.Dataset = mongoose.model('Dataset'); // Assuming you have a Dataset model
         this.neo4j = neo4jDriver;
     }
 
@@ -15,17 +24,23 @@ class DatasetRepository extends BaseRepository {
         const cacheKey = `dataset:${datasetId}`;
         
         return await this.cachedOperation(cacheKey, async () => {
-            const dataset = await this.Dataset.findById(datasetId).lean();
-            return dataset;
+            return await DatasetQueries.findById(datasetId);
         }, 600);
     }
 
-    async getDatasetsByUser(userId) {
-        const cacheKey = `user:datasets:${userId}`;
+    async getAllDatasets() {
+        const cacheKey = 'datasets:all';
         
         return await this.cachedOperation(cacheKey, async () => {
-            const datasets = await this.Dataset.find({ creator: userId }).lean();
-            return datasets;
+            return await DatasetQueries.findAll();
+        }, 300);
+    }
+
+    async getApprovedDatasets() {
+        const cacheKey = 'datasets:approved';
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await DatasetQueries.findApproved();
         }, 300);
     }
 
@@ -33,141 +48,102 @@ class DatasetRepository extends BaseRepository {
         const cacheKey = `dataset:social:${datasetId}:${userId}`;
         
         return await this.cachedOperation(cacheKey, async () => {
-            const [dataset, isFollowing, userVotes] = await Promise.all([
-                this.getDatasetById(datasetId),
-                this.isUserFollowingDataset(userId, datasetId),
-                this.getUserVotesForDataset(userId, datasetId)
-            ]);
+            const dataset = await this.getDatasetById(datasetId);
+            let isFollowing = false;
+            let voteCount = 0;
+            let followers = [];
+            
+            if (userId) {
+                [isFollowing, voteCount, followers] = await Promise.all([
+                    this.isUserFollowingDataset(userId, datasetId),
+                    this.getDatasetVotes(datasetId),
+                    this.getDatasetFollowers(datasetId)
+                ]);
+            } else {
+                [voteCount, followers] = await Promise.all([
+                    this.getDatasetVotes(datasetId),
+                    this.getDatasetFollowers(datasetId)
+                ]);
+            }
             
             return {
-                ...dataset,
+                ...dataset.toObject(),
                 isFollowing,
-                userVotes
+                voteCount,
+                followersCount: followers.length
             };
         }, 300);
     }
 
-    async searchDatasets(query, filters = {}) {
-        const cacheKey = this.generateQueryHash('dataset_search', { query, filters });
-        
-        return await this.cachedOperation(cacheKey, async () => {
-            const searchCriteria = {
-                $or: [
-                    { title: { $regex: query, $options: 'i' } },
-                    { description: { $regex: query, $options: 'i' } },
-                    { tags: { $in: [new RegExp(query, 'i')] } }
-                ]
-            };
-            
-            const datasets = await this.Dataset.find(searchCriteria).lean();
-            return datasets;
-        }, 300);
-    }
-
-    // Dataset social interactions
     async isUserFollowingDataset(userId, datasetId) {
         const cacheKey = `userFollowsDataset:${userId}:${datasetId}`;
         
         return await this.cachedOperation(cacheKey, async () => {
-            const session = this.neo4j.session();
-            try {
-                const result = await session.run(
-                    `MATCH (:User {mongoId: $userId})-[r:FOLLOWS]->(:Dataset {mongoId: $datasetId})
-                     RETURN r IS NOT NULL as isFollowing`,
-                    {
-                        userId: userId.toString(),
-                        datasetId: datasetId.toString()
-                    }
-                );
-                
-                return result.records[0]?.get('isFollowing') || false;
-            } finally {
-                await session.close();
-            }
+            return await isUserFollowingDataset(userId, datasetId);
         }, 300);
     }
 
-    async getUserVotesForDataset(userId, datasetId) {
-        const cacheKey = `userVotes:${userId}:${datasetId}`;
+    async getDatasetVotes(datasetId) {
+        const cacheKey = `dataset:votes:${datasetId}`;
         
         return await this.cachedOperation(cacheKey, async () => {
-            const session = this.neo4j.session();
-            try {
-                const result = await session.run(
-                    `MATCH (:User {mongoId: $userId})-[r:VOTED]->(:Dataset {mongoId: $datasetId})
-                     RETURN count(r) as voteCount`,
-                    {
-                        userId: userId.toString(),
-                        datasetId: datasetId.toString()
-                    }
-                );
-                
-                return result.records[0]?.get('voteCount').toNumber() || 0;
-            } finally {
-                await session.close();
-            }
+            return await getDatasetVotes(datasetId);
+        }, 300);
+    }
+
+    async getDatasetFollowers(datasetId) {
+        const cacheKey = `dataset:followers:${datasetId}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            return await getDatasetFollowers(datasetId);
+        }, 300);
+    }
+
+    async getUserDatasets(userId) {
+        const cacheKey = `user:datasets:${userId}`;
+        
+        return await this.cachedOperation(cacheKey, async () => {
+            const datasetIds = await getUserDatasets(userId);
+            if (datasetIds.length === 0) return [];
+            
+            // Get full dataset data from MongoDB
+            const datasets = await Promise.all(
+                datasetIds.map(id => this.getDatasetById(id))
+            );
+            
+            return datasets.filter(dataset => dataset !== null);
         }, 300);
     }
 
     // WRITE operations with cache invalidation
-    async createDataset(datasetData, creatorId) {
-        const session = await this.mongo.startSession();
-        
+    async createDataset(datasetData) {
+        const dataset = await DatasetQueries.create(datasetData);
+
+        // Create dataset reference in Neo4j using abstracted function
         try {
-            session.startTransaction();
-            
-            // Create dataset in MongoDB
-            const dataset = new this.Dataset({
-                ...datasetData,
-                creator: creatorId
-            });
-            const savedDataset = await dataset.save({ session });
-            
-            // Create dataset reference in Neo4j
-            const neo4jSession = this.neo4j.session();
-            try {
-                await neo4jSession.run(
-                    `CREATE (d:Dataset { mongoId: $mongoId, title: $title, creatorId: $creatorId }) 
-                     WITH d
-                     MATCH (u:User {mongoId: $creatorId})
-                     CREATE (u)-[:CREATED]->(d)`,
-                    { 
-                        mongoId: savedDataset._id.toString(),
-                        title: savedDataset.title,
-                        creatorId: creatorId.toString()
-                    }
-                );
-            } finally {
-                await neo4jSession.close();
-            }
-            
-            await session.commitTransaction();
-            
-            // Invalidate relevant cache
-            await Promise.all([
-                this.invalidatePattern('dataset:*'),
-                this.invalidatePattern(`user:datasets:${creatorId}`),
-                this.invalidatePattern('*dataset_search*')
-            ]);
-            
-            console.log('Dataset created and cache invalidated');
-            return savedDataset;
-            
+            await createDatasetReferenceInNeo4j(
+                dataset._id, 
+                dataset.nombre, 
+                dataset.creadorId
+            );
         } catch (error) {
-            await session.abortTransaction();
-            console.error('Error creating dataset:', error);
-            throw error;
-        } finally {
-            await session.endSession();
+            console.error('⚠️ Dataset creado en MongoDB pero falló en Neo4j:', error.message);
+            // Continue even if Neo4j fails
         }
+
+        // Invalidate relevant cache
+        await Promise.all([
+            this.invalidatePattern('dataset:*'),
+            this.invalidatePattern('datasets:*'),
+            this.invalidatePattern(`user:datasets:${dataset.creadorId}`)
+        ]);
+
+        console.log('✅ Dataset created and cache invalidated');
+        return dataset;
     }
 
     async updateDataset(datasetId, updateData) {
-        const updatedDataset = await this.Dataset.findByIdAndUpdate(
-            datasetId, 
-            updateData, 
-            { new: true, runValidators: true }
-        ).lean();
+        const updatedDataset = await DatasetQueries.update(datasetId, updateData);
 
         if (updatedDataset) {
             // Invalidate all cache related to this dataset
@@ -175,79 +151,77 @@ class DatasetRepository extends BaseRepository {
                 this.invalidateCache(`dataset:${datasetId}`),
                 this.invalidatePattern(`dataset:social:${datasetId}:*`),
                 this.invalidatePattern(`userFollowsDataset:*:${datasetId}`),
-                this.invalidatePattern(`userVotes:*:${datasetId}`),
-                this.invalidatePattern('*dataset_search*')
+                this.invalidatePattern(`dataset:votes:${datasetId}`),
+                this.invalidatePattern(`dataset:followers:${datasetId}`),
+                this.invalidatePattern('datasets:*')
             ]);
         }
 
         return updatedDataset;
     }
 
-    async followDataset(userId, datasetId) {
-        const session = this.neo4j.session();
-        
-        try {
-            const result = await session.run(
-                `MATCH (u:User {mongoId: $userId}), (d:Dataset {mongoId: $datasetId})
-                 MERGE (u)-[r:FOLLOWS]->(d)
-                 SET r.createdAt = datetime()
-                 RETURN r`,
-                {
-                    userId: userId.toString(),
-                    datasetId: datasetId.toString()
-                }
-            );
-            
-            // Invalidate relevant cache
+    async updateDatasetState(datasetId, estado) {
+        const updatedDataset = await DatasetQueries.updateState(datasetId, estado);
+
+        if (updatedDataset) {
             await Promise.all([
-                this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
-                this.invalidateCache(`userFollowsDataset:${userId}:${datasetId}`),
-                this.invalidatePattern(`user:datasets:${userId}`)
+                this.invalidateCache(`dataset:${datasetId}`),
+                this.invalidatePattern('datasets:*')
             ]);
-            
-            console.log('Dataset follow relationship created and cache invalidated');
-            return result;
-            
-        } catch (error) {
-            console.error('Error following dataset:', error);
-            throw error;
-        } finally {
-            await session.close();
         }
+
+        return updatedDataset;
+    }
+
+    async incrementDownloads(datasetId) {
+        const updatedDataset = await DatasetQueries.incrementDownloads(datasetId);
+
+        if (updatedDataset) {
+            await this.invalidateCache(`dataset:${datasetId}`);
+        }
+
+        return updatedDataset;
+    }
+
+    async followDataset(userId, datasetId) {
+        const result = await followDataset(userId, datasetId);
+        
+        // Invalidate relevant cache
+        await Promise.all([
+            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
+            this.invalidateCache(`userFollowsDataset:${userId}:${datasetId}`),
+            this.invalidateCache(`dataset:followers:${datasetId}`)
+        ]);
+        
+        console.log('✅ Dataset follow relationship created and cache invalidated');
+        return result;
+    }
+
+    async unfollowDataset(userId, datasetId) {
+        const result = await unfollowDataset(userId, datasetId);
+        
+        // Invalidate relevant cache
+        await Promise.all([
+            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
+            this.invalidateCache(`userFollowsDataset:${userId}:${datasetId}`),
+            this.invalidateCache(`dataset:followers:${datasetId}`)
+        ]);
+        
+        console.log('✅ Dataset unfollow relationship created and cache invalidated');
+        return result;
     }
 
     async voteForDataset(userId, datasetId, voteType = 'like') {
-        const session = this.neo4j.session();
+        const result = await voteForDataset(userId, datasetId, voteType);
         
-        try {
-            const result = await session.run(
-                `MATCH (u:User {mongoId: $userId}), (d:Dataset {mongoId: $datasetId})
-                 MERGE (u)-[r:VOTED]->(d)
-                 SET r.type = $voteType, r.votedAt = datetime()
-                 RETURN r`,
-                {
-                    userId: userId.toString(),
-                    datasetId: datasetId.toString(),
-                    voteType
-                }
-            );
-            
-            // Invalidate relevant cache
-            await Promise.all([
-                this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
-                this.invalidateCache(`userVotes:${userId}:${datasetId}`),
-                this.invalidatePattern(`dataset:${datasetId}`)
-            ]);
-            
-            console.log('Dataset vote recorded and cache invalidated');
-            return result;
-            
-        } catch (error) {
-            console.error('Error voting for dataset:', error);
-            throw error;
-        } finally {
-            await session.close();
-        }
+        // Invalidate relevant cache
+        await Promise.all([
+            this.invalidateCache(`dataset:social:${datasetId}:${userId}`),
+            this.invalidateCache(`dataset:votes:${datasetId}`)
+        ]);
+        
+        console.log('✅ Dataset vote recorded and cache invalidated');
+        return result;
     }
 }
 

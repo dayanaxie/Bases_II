@@ -1,11 +1,11 @@
-// userRoutes.js - VERSIÓN CORREGIDA
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import User from '../models/User.js';
-import { uploadUser } from "../config/multer.js";
 import jwt from 'jsonwebtoken';
+import { uploadUser } from "../config/multer.js";
+import UserRepository from '../repositories/user-repository.js';
 import mongoose from 'mongoose';
 import { 
   createUserReferenceInNeo4j, 
@@ -24,6 +24,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
 
+// Initialize repository
+const userRepo = new UserRepository(mongoose);
+
 // Seguir usuario
 router.post('/follow', async (req, res) => {
   try {
@@ -36,7 +39,7 @@ router.post('/follow', async (req, res) => {
       });
     }
 
-    await followUser(followerId, followedId);
+    await userRepo.followUser(followerId, followedId);
 
     res.json({
       success: true,
@@ -65,7 +68,7 @@ router.post('/unfollow', async (req, res) => {
       });
     }
 
-    await unfollowUser(followerId, followedId);
+    await userRepo.unfollowUser(followerId, followedId);
 
     res.json({
       success: true,
@@ -94,7 +97,7 @@ router.post('/isfollowing', async (req, res) => {
       });
     }
 
-    const following = await isFollowing(followerId, followedId);
+    const following = await userRepo.isFollowing(followerId, followedId);
 
     res.json({
       success: true,
@@ -116,7 +119,6 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validaciones
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -124,17 +126,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Buscar usuario por email
-    const user = await User.findByEmail(email);
+    // Buscar usuario por email usando repository
+    const user = await userRepo.getUserByEmail(email);
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales inválidas'
+        message: 'Usuario no encontrado'
       });
     }
 
     // Verificar contraseña
-    const isPasswordValid = await user.verifyPassword(password);
+    const isPasswordValid = await userRepo.verifyUserPassword(email, password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -142,18 +144,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // 🔒 Generar token JWT
+    // Generar token JWT
     const token = jwt.sign(
       { id: user._id, tipoUsuario: user.tipoUsuario, username: user.username },
       process.env.JWT_SECRET,
-      { expiresIn: '2h' } // Token válido por 2 horas
+      { expiresIn: '2h' }
     );
 
-    // ✅ Responder con token y datos del usuario
     res.json({
       success: true,
       message: 'Login exitoso',
-      token, // ← aquí va el token
+      token,
       user: {
         _id: user._id,
         username: user.username,
@@ -223,8 +224,8 @@ router.post('/register', uploadUser.single('foto'), async (req, res) => {
       });
     }
 
-    // Verificar si el usuario ya existe
-    const existingUserByEmail = await User.findByEmail(correoElectronico);
+    // Verificar si el usuario ya existe usando repository
+    const existingUserByEmail = await userRepo.getUserByEmail(correoElectronico);
     if (existingUserByEmail) {
       if (req.file) {
         fs.unlinkSync(req.file.path);
@@ -235,7 +236,7 @@ router.post('/register', uploadUser.single('foto'), async (req, res) => {
       });
     }
 
-    const existingUserByUsername = await User.findByUsername(username);
+    const existingUserByUsername = await userRepo.getUserByUsername(username);
     if (existingUserByUsername) {
       if (req.file) {
         fs.unlinkSync(req.file.path);
@@ -246,30 +247,19 @@ router.post('/register', uploadUser.single('foto'), async (req, res) => {
       });
     }
 
-    // Crear nuevo usuario
-    const newUser = new User({
+    // Preparar datos del usuario
+    const userData = {
       foto: req.file ? `/uploads/profile-pictures/${req.file.filename}` : null,
       username,
       nombreCompleto,
       correoElectronico: correoElectronico.toLowerCase(),
       fechaNacimiento,
-      tipoUsuario
-    });
+      tipoUsuario,
+      password // Repository will handle encryption
+    };
 
-    // Encriptar contraseña
-    await newUser.encryptPassword(password);
-    
-    // Guardar usuario en la base de datos
-    await newUser.save();
-
-    // Crear referencia en Neo4j (solo el ID)
-    try {
-      await createUserReferenceInNeo4j(newUser._id);
-      console.log('✅ Referencia de usuario creada en Neo4j');
-    } catch (neo4jError) {
-      console.error('⚠️ Usuario creado en MongoDB pero falló en Neo4j:', neo4jError.message);
-      // No fallamos la petición completa si Neo4j falla
-    }
+    // Crear usuario usando repository
+    const newUser = await userRepo.createUser(userData);
 
     res.status(201).json({
       success: true,
@@ -301,7 +291,7 @@ router.post('/register', uploadUser.single('foto'), async (req, res) => {
 // obtener todos los usuarios
 router.get('/', async (req, res) => {
   try {
-    const users = await User.find().select('-password -salt');
+    const users = await userRepo.getAllUsers();
     
     res.json({
       success: true,
@@ -318,9 +308,9 @@ router.get('/', async (req, res) => {
 });
 
 // obtener usuario por id
-router.get('/:id',  async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password -salt');
+    const user = await userRepo.getUserById(req.params.id);
     
     if (!user) {
       return res.status(404).json({
@@ -349,8 +339,8 @@ router.get('/:id',  async (req, res) => {
   }
 });
 
-// actualziar usuario
-router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
+// actualizar usuario
+router.put('/:id', uploadUser.single('foto'), async (req, res) => {
   try {
     const {
       username,
@@ -360,7 +350,7 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
     } = req.body;
 
     // Buscar usuario
-    let user = await User.findById(req.params.id);
+    let user = await userRepo.getUserById(req.params.id);
     
     if (!user) {
       if (req.file) {
@@ -372,9 +362,9 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
       });
     }
 
-    // Verificar si el nuevo email ya existe (si se está cambiando)
+    // Verificar si el nuevo email ya existe
     if (correoElectronico && correoElectronico !== user.correoElectronico) {
-      const existingUser = await User.findByEmail(correoElectronico);
+      const existingUser = await userRepo.getUserByEmail(correoElectronico);
       if (existingUser) {
         if (req.file) {
           fs.unlinkSync(req.file.path);
@@ -386,9 +376,9 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
       }
     }
 
-    // Verificar si el nuevo username ya existe (si se está cambiando)
+    // Verificar si el nuevo username ya existe
     if (username && username !== user.username) {
-      const existingUser = await User.findByUsername(username);
+      const existingUser = await userRepo.getUserByUsername(username);
       if (existingUser) {
         if (req.file) {
           fs.unlinkSync(req.file.path);
@@ -400,7 +390,7 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
       }
     }
 
-    // Actualizar campos
+    // Preparar datos de actualización
     const updateData = {};
     if (username) updateData.username = username;
     if (nombreCompleto) updateData.nombreCompleto = nombreCompleto;
@@ -419,11 +409,8 @@ router.put('/:id',  uploadUser.single('foto'), async (req, res) => {
       updateData.foto = `/uploads/profile-pictures/${req.file.filename}`;
     }
 
-    user = await User.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-password -salt');
+    // Actualizar usuario usando repository
+    user = await userRepo.updateUser(req.params.id, updateData);
 
     res.json({
       success: true,
@@ -472,20 +459,15 @@ router.patch('/:id/tipoUsuario', async (req, res) => {
             });
         }
 
-        // Verificar que el usuario existe
-        const user = await User.findById(id);
-        if (!user) {
+        // Actualizar el usuario usando repository
+        const updatedUser = await userRepo.updateUserRole(id, tipoUsuario);
+
+        if (!updatedUser) {
             return res.status(404).json({
                 success: false,
                 error: 'Usuario no encontrado'
             });
         }
-        // Actualizar el usuario
-        const updatedUser = await User.findByIdAndUpdate(
-            id,
-            { tipoUsuario },
-            { new: true, runValidators: true }
-        ).select('-password');
 
         res.json({
             success: true,
@@ -501,44 +483,21 @@ router.patch('/:id/tipoUsuario', async (req, res) => {
         });
     }
 });
-// Obtener seguidores de un usuario con datos completos - CORREGIDO
+
+// Obtener seguidores de un usuario
 router.get('/followers/:userId', async (req, res) => {
   try {
     const { userId } = req.params; 
     
-    // Obtener IDs de seguidores desde Neo4j
-    const followerIds = await getFollowers(userId); 
+    const followers = await userRepo.getFollowers(userId);
     
-    if (followerIds.length === 0) { 
-      return res.json({
-        success: true,
-        followers: []
-      });
-    }
-
-    // Convertir strings a ObjectId
-    const objectIds = followerIds.map(id => {
-      try {
-        return new mongoose.Types.ObjectId(id);
-      } catch (error) {
-        console.error('❌ Error convirtiendo ID:', id, error);
-        return null;
-      }
-    }).filter(id => id !== null);
-
-    // Obtener datos completos de los seguidores desde MongoDB
-    const followers = await User.find(
-      { _id: { $in: objectIds } },
-      'username nombreCompleto correoElectronico foto fechaNacimiento tipoUsuario'
-    );
-
     res.json({
       success: true,
       followers: followers
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo seguidores:', error);
+    console.error('Error obteniendo seguidores:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -547,40 +506,12 @@ router.get('/followers/:userId', async (req, res) => {
   }
 });
 
-// Obtener usuarios seguidos con datos completos - CORREGIDO
+// Obtener usuarios seguidos
 router.get('/following/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
-    
-    // Obtener IDs de usuarios seguidos desde Neo4j
-    const followingIds = await getFollowing(userId);
-    
-    
-    if (followingIds.length === 0) {
-      return res.json({
-        success: true,
-        following: []
-      });
-    }
-
-    // Convertir strings a ObjectId
-    const objectIds = followingIds.map(id => {
-      try {
-        return new mongoose.Types.ObjectId(id);
-      } catch (error) {
-        console.error('❌ Error convirtiendo ID:', id, error);
-        return null;
-      }
-    }).filter(id => id !== null);
-    
-
-    // Obtener datos completos de los usuarios seguidos desde MongoDB
-    const following = await User.find(
-      { _id: { $in: objectIds } },
-      'username nombreCompleto correoElectronico foto fechaNacimiento tipoUsuario'
-    );
-
+    const following = await userRepo.getFollowing(userId);
 
     res.json({
       success: true,
@@ -588,7 +519,7 @@ router.get('/following/:userId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo seguidos:', error);
+    console.error('Error obteniendo seguidos:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -602,13 +533,7 @@ router.get('/search/:query', async (req, res) => {
   try {
     const { query } = req.params;
     
-    const users = await User.find({
-      $or: [
-        { username: { $regex: query, $options: 'i' } },
-        { nombreCompleto: { $regex: query, $options: 'i' } }
-      ],
-      tipoUsuario: { $ne: 'admin' } // Excluir administradores
-    }, 'username nombreCompleto foto').limit(20);
+    const users = await userRepo.searchUsers(query);
 
     res.json({
       success: true,
@@ -624,19 +549,12 @@ router.get('/search/:query', async (req, res) => {
   }
 });
 
-
 // Obtener todos los usuarios para mensajes (excluyendo al usuario actual)
 router.get('/messages/users', async (req, res) => {
   try {
-    const { exclude } = req.query; // ID del usuario actual a excluir
+    const { exclude } = req.query;
     
-    let filter = { tipoUsuario: { $ne: 'admin' } };
-    if (exclude) {
-      filter._id = { $ne: exclude };
-    }
-
-    const users = await User.find(filter, 'username nombreCompleto foto correoElectronico')
-      .sort({ nombreCompleto: 1 });
+    const users = await userRepo.getAllUsers(exclude);
 
     res.json({
       success: true,
