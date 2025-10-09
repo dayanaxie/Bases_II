@@ -1,7 +1,7 @@
 // initTestData.js
 import User from '../models/User.js';
 import Dataset from '../models/Dataset.js';
-import { createUserReferenceInNeo4j, createDatasetReferenceInNeo4j, followUser, followDataset } from '../config/neo4j.js';
+import { createUserReferenceInNeo4j, createDatasetReferenceInNeo4j, followUser } from '../config/neo4j.js';
 
 async function createAdminUser() {
   const existingAdmin = await User.findOne({ 
@@ -185,7 +185,6 @@ async function createTestDatasets(users) {
     try {
       await createDatasetReferenceInNeo4j(
         dataset._id,
-        dataset.nombre,
         dataset.creadorId
       );
       console.log(`Referencia de dataset "${datasetData.nombre}" creada en Neo4j`);
@@ -218,12 +217,6 @@ async function createTestRelationships(users, datasets) {
     // Javier sigue a Carlos y Ana
     await followUser(users[3]._id, users[1]._id); // javier -> carlos
     await followUser(users[3]._id, users[2]._id); // javier -> ana
-
-    // Usuarios siguen datasets
-    await followDataset(users[0]._id, datasets[1]._id); // maria sigue dataset COVID
-    await followDataset(users[1]._id, datasets[0]._id); // carlos sigue dataset sentimientos
-    await followDataset(users[2]._id, datasets[4]._id); // ana sigue dataset e-commerce
-    await followDataset(users[3]._id, datasets[2]._id); // javier sigue dataset climático
     
     console.log('Relaciones de seguimiento creadas exitosamente!');
   } catch (error) {
@@ -231,7 +224,7 @@ async function createTestRelationships(users, datasets) {
   }
 }
 
-export async function initTestData() {
+async function initTestData() {
   try {
     console.log('Inicializando datos de prueba...');
     await createAdminUser();

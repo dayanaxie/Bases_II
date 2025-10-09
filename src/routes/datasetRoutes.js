@@ -17,7 +17,6 @@ import {
   getDatasetCommentsWithReplies,
   hideReply
 } from "../config/neo4j.js";
-import { uploadDataset } from "../config/multer.js";
 import DatasetRepository from '../repositories/dataset-repository.js';
 import mongoose from 'mongoose';
 

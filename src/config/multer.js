@@ -115,4 +115,4 @@ const uploadDataset = multer({
 export { uploadUser, uploadDataset };
 
 // Export por defecto para mantener compatibilidad con código existente
-export default uploadUser;
+//export default uploadUser;

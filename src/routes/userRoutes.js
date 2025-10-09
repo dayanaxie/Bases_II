@@ -655,8 +655,11 @@ router.post('/messages/send', async (req, res) => {
     }
 
     // Verificar que los usuarios existan
-    const senderUser = await User.findById(sender);
-    const receiverUser = await User.findById(receiver);
+    //const senderUser = await User.findById(sender);
+    //const receiverUser = await User.findById(receiver);
+
+    const senderUser = await userRepo.getUserById(sender);
+    const receiverUser = await userRepo.getUserById(receiver);
 
     if (!senderUser || !receiverUser) {
       return res.status(404).json({

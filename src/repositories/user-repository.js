@@ -107,7 +107,7 @@ class UserRepository extends BaseRepository {
             return await isFollowing(followerId, followedId);
         }, 300);
     }
-
+/*
     async getUserDatasets(userId) {
         const datasetRepo = new DatasetRepository(mongoose);
 
@@ -125,7 +125,7 @@ class UserRepository extends BaseRepository {
             return datasets.filter(dataset => dataset !== null);
         }, 300);
     }
-
+*/
     // WRITE operations with cache invalidation
     async createUser(userData) {
         // Create user in MongoDB

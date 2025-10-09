@@ -3,13 +3,9 @@ import BaseRepository from './base-repository.js';
 import { DatasetQueries } from '../config/mongo-queries.js';
 import { 
   createDatasetReferenceInNeo4j,
-  isUserFollowingDataset,
-  followDataset,
-  unfollowDataset,
-  voteForDataset,
-  getDatasetVotes,
-  getDatasetFollowers,
-  getUserDatasets
+  createOrUpdateVote,
+  getDatasetVotes//,
+  //getUserDatasets
 } from '../config/neo4j.js';
 
 class DatasetRepository extends BaseRepository {
@@ -51,35 +47,23 @@ class DatasetRepository extends BaseRepository {
             const dataset = await this.getDatasetById(datasetId);
             let isFollowing = false;
             let voteCount = 0;
-            let followers = [];
             
             if (userId) {
                 [isFollowing, voteCount, followers] = await Promise.all([
-                    this.isUserFollowingDataset(userId, datasetId),
-                    this.getDatasetVotes(datasetId),
-                    this.getDatasetFollowers(datasetId)
+                    this.getDatasetVotes(datasetId)/*,
+                    this.getDatasetFollowers(datasetId)*/
                 ]);
             } else {
-                [voteCount, followers] = await Promise.all([
-                    this.getDatasetVotes(datasetId),
-                    this.getDatasetFollowers(datasetId)
+                [voteCount] = await Promise.all([
+                    this.getDatasetVotes(datasetId)
                 ]);
             }
             
             return {
                 ...dataset.toObject(),
                 isFollowing,
-                voteCount,
-                followersCount: followers.length
+                voteCount
             };
-        }, 300);
-    }
-
-    async isUserFollowingDataset(userId, datasetId) {
-        const cacheKey = `userFollowsDataset:${userId}:${datasetId}`;
-        
-        return await this.cachedOperation(cacheKey, async () => {
-            return await isUserFollowingDataset(userId, datasetId);
         }, 300);
     }
 
@@ -90,15 +74,7 @@ class DatasetRepository extends BaseRepository {
             return await getDatasetVotes(datasetId);
         }, 300);
     }
-
-    async getDatasetFollowers(datasetId) {
-        const cacheKey = `dataset:followers:${datasetId}`;
-        
-        return await this.cachedOperation(cacheKey, async () => {
-            return await getDatasetFollowers(datasetId);
-        }, 300);
-    }
-
+/*
     async getUserDatasets(userId) {
         const cacheKey = `user:datasets:${userId}`;
         
@@ -114,7 +90,7 @@ class DatasetRepository extends BaseRepository {
             return datasets.filter(dataset => dataset !== null);
         }, 300);
     }
-
+*/
     // WRITE operations with cache invalidation
     async createDataset(datasetData) {
         const dataset = await DatasetQueries.create(datasetData);
@@ -123,7 +99,6 @@ class DatasetRepository extends BaseRepository {
         try {
             await createDatasetReferenceInNeo4j(
                 dataset._id, 
-                dataset.nombre, 
                 dataset.creadorId
             );
         } catch (error) {
@@ -183,6 +158,7 @@ class DatasetRepository extends BaseRepository {
         return updatedDataset;
     }
 
+    /*
     async followDataset(userId, datasetId) {
         const result = await followDataset(userId, datasetId);
         
@@ -209,10 +185,10 @@ class DatasetRepository extends BaseRepository {
         
         console.log('✅ Dataset unfollow relationship created and cache invalidated');
         return result;
-    }
+    }*/
 
-    async voteForDataset(userId, datasetId, voteType = 'like') {
-        const result = await voteForDataset(userId, datasetId, voteType);
+    async createOrUpdateVote(userId, datasetId, voteType = 'like') {
+        const result = await createOrUpdateVote(userId, datasetId, voteType);
         
         // Invalidate relevant cache
         await Promise.all([
