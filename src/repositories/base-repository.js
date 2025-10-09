@@ -1,5 +1,5 @@
 // base-repository.js
-import RedisClient from './redis-client.js';
+import RedisClient from '../config/redis.js';
 
 class BaseRepository {
     constructor() {
