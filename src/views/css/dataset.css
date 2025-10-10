@@ -494,6 +494,20 @@ body {
   border-color: var(--variable-collection-text-2);
 }
 
+.submit-comment-btn{
+  background-color: var(--variable-collection-contraste);
+  color: var(--variable-collection-text-2);
+}
+
+
+.submit-comment-btn:hover, 
+.submit-comment-btn:focus{
+    background-color: var(--variable-collection-text-2);
+    color: var(--variable-collection-contraste);
+    border: 1px solid var(--variable-collection-contraste);
+}
+
+
 .submit-comment-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;

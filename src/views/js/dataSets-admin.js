@@ -140,66 +140,66 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-function attachToggleEvents() {
-  const toggleButtons = document.querySelectorAll(".toggle-btn");
+  function attachToggleEvents() {
+    const toggleButtons = document.querySelectorAll(".toggle-btn");
 
-  toggleButtons.forEach((button) => {
-    button.addEventListener("click", function() {
-      const datasetId = this.getAttribute("data-dataset-id");
-      
-      if (this.classList.contains("pending")) {
-        // Cambiar de Pendiente → Aprobado
-        this.classList.remove("pending");
-        this.classList.add("soft");
-        this.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
-        this.title = "Aprobado"; // Tooltip
-        updateDatasetStatus(datasetId, "aprobado");
-      } else if (this.classList.contains("soft")) {
-        // Cambiar de Aprobado → Pendiente
-        this.classList.remove("soft");
-        this.classList.add("pending");
-        this.innerHTML = `<i class="fa-solid fa-clock"></i>`;
-        this.title = "Pendiente"; // Tooltip
-        updateDatasetStatus(datasetId, "pendiente");
-      }
+    toggleButtons.forEach((button) => {
+      button.addEventListener("click", function() {
+        const datasetId = this.getAttribute("data-dataset-id");
+        
+        if (this.classList.contains("pending")) {
+          // Cambiar de Pendiente → Aprobado
+          this.classList.remove("pending");
+          this.classList.add("soft");
+          this.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+          this.title = "Aprobado"; // Tooltip
+          updateDatasetStatus(datasetId, "aprobado");
+        } else if (this.classList.contains("soft")) {
+          // Cambiar de Aprobado → Pendiente
+          this.classList.remove("soft");
+          this.classList.add("pending");
+          this.innerHTML = `<i class="fa-solid fa-clock"></i>`;
+          this.title = "Pendiente"; // Tooltip
+          updateDatasetStatus(datasetId, "pendiente");
+        }
+      });
     });
-  });
-}
+  }
 
 
 // Función para actualizar el estado del dataset en el backend
-async function updateDatasetStatus(datasetId, newStatus) {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3000/api/datasets/${datasetId}/estado`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        estado: newStatus
-      })
-    });
+  async function updateDatasetStatus(datasetId, newStatus) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3000/api/datasets/${datasetId}/estado`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          estado: newStatus
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error('Error al actualizar el estado del dataset');
-    }
+      if (!response.ok) {
+        throw new Error('Error al actualizar el estado del dataset');
+      }
 
-    const result = await response.json();
-    console.log('Estado actualizado:', result);
-    
-    // Actualizar el dataset en allDatasets
-    const datasetIndex = allDatasets.findIndex(d => d._id === datasetId);
-    if (datasetIndex !== -1) {
-      allDatasets[datasetIndex].estado = newStatus;
+      const result = await response.json();
+      console.log('Estado actualizado:', result);
+      
+      // Actualizar el dataset en allDatasets
+      const datasetIndex = allDatasets.findIndex(d => d._id === datasetId);
+      if (datasetIndex !== -1) {
+        allDatasets[datasetIndex].estado = newStatus;
+      }
+      
+    } catch (error) {
+      console.error('Error actualizando estado:', error);
+      // Podrías mostrar un mensaje de error al usuario aquí
     }
-    
-  } catch (error) {
-    console.error('Error actualizando estado:', error);
-    // Podrías mostrar un mensaje de error al usuario aquí
   }
-}
   // Función para redirigir al perfil del usuario
   function viewUserProfile(userId) {
     // Aquí puedes redirigir a la página del perfil del usuario

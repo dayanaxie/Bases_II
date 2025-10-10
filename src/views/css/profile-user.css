@@ -1,13 +1,24 @@
 body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--variable-collection-fondo-0);
     font-family: Arial, sans-serif; 
 }
 
 .profile-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+  width: 600px;
+  height: 80%;
+    /* margin: 0 auto; */
+  margin-bottom: 2%;
+  padding: 16px;
     background: var(--variable-collection-objeto-0);
-    min-height: 100vh;
+    /* min-height: 100vh; */
+  border-radius: 10px;
 }
 
 .header-container {
@@ -545,31 +556,6 @@ body {
     outline: none;
     border-color: #0056b3;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* Estilos para el botón de edición */
-.edit-button {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    margin-top: 20px;
-}
-
-.edit-button:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.edit-button:active {
-    transform: translateY(0);
 }
 
 /* Ocultar input de archivo */

@@ -15,25 +15,27 @@
   <div class="container">
     <!-- Header -->
     <header class="header">
-        <button class="back-btn" id="logout-btn">
-            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      <button class="back-btn" id="logout-btn" title="Cerrar sesión">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      </button>
+      <!-- <h1>Usuarios</h1> -->
+      <div>
+        <button class="users-btn" id="notifications-btn" text="Notificaciones" title="Notificaciones"><i class="fa-solid fa-bell"></i></button>
+        <button class="users-btn" id="messages-btn" text="Mensajes" title="Mensajes"><i class="fa-solid fa-message"></i></button>
+        <button class="users-btn" id="datasets-btn" text="DataSets" title="DataSets">
+          <i class="fa-solid fa-database"></i>
         </button>
-        <h1>Usuarios</h1>
-        <div>
-            <button class="users-btn" id="notifications-btn" text="Notificaciones"><i class="fa-solid fa-bell"></i></button>
-            <button class="users-btn" id="messages-btn" text="Mensajes" title="Mensajes"><i class="fa-solid fa-message"></i></button>
-            <button class="users-btn" id="datasets-btn" text="DataSets" title="DataSets">
-                <i class="fa-solid fa-database"></i>
-            </button>
-            <button class="users-btn" id="profile-btn" text="Perfil" title="Perfil"><i class="fa-solid fa-user"></i></button>
-        </div>
+        <button class="users-btn" id="profile-btn" text="Perfil" title="Perfil"><i class="fa-solid fa-user"></i></button>
+      </div>
     </header>
+
+    <h1>Usuarios</h1>
 
     <!-- Search -->
     <div class="search-bar">
       <input type="text" placeholder="Buscar...">
       <button class="filter-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
-      <button class="filter-btn"><i class="fa-solid fa-filter"></i></button>
+      <!-- <button class="filter-btn"><i class="fa-solid fa-filter"></i></button> -->
     </div>
 
     <!-- User list -->
