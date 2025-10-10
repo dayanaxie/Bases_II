@@ -110,7 +110,7 @@ Both containers use a shared keyfile for internal authentication, ensuring secur
 
 In order to represent following, votes and creation relationships, we decided to use a graph database, for this we picked Neo4j. The Neo4j database contains two nodes; Usuario and Dataset. Here we represented following and messaging as a relation `User -> User`, the voting, creation and comment relationships are represented as a `User -> Dataset` relation.
 
-![Mongo Database Diagram](./documentation/diagrama_neo4j_v2.svg)
+![Mongo Database Diagram](./documentation/diagrama_neo4j_v2.png)
 
 ---
 
