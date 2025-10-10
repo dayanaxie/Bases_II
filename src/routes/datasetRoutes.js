@@ -116,6 +116,30 @@ router.get("/", async (req, res) => {
   }
 });
 
+// obtener datasets por creador
+router.get("/creador/:creadorId", async (req, res) => {
+  try {
+    const { creadorId } = req.params;
+    
+    const datasets = await Dataset.find({ 
+      creadorId: creadorId 
+    })
+    .populate('creadorId', 'username nombreCompleto')
+    .sort({ fecha_inclusion: -1 });
+    
+    res.json({
+      success: true,
+      count: datasets.length,
+      datasets: datasets
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
 // Listar todos los datasets aprobados
 router.get("/aprobados", async (req, res) => {
   try {

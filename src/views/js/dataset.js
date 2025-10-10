@@ -53,69 +53,7 @@ async function loadDatasetData(datasetId) {
   } catch (error) {
     console.error("Error cargando datos del dataset:", error);
     showError('Error al cargar el dataset');
-    loadMockData();
   }
-}
-
-function loadMockData() {
-    const datasetMock = {
-        nombre: "Ejemplo Dataset",
-        descripcion: "Breve descripción del dataset.",
-        fechaCreacion: "2024-09-29",
-        archivos: 5,
-        estado: "Activo",
-        tamaño: "120 MB",
-        descargas: 34,
-        creadorId: {
-            username: "Usuario Ejemplo"
-        },
-        comments: [
-            {
-                commentId: "1",
-                userName: "Usuario1",
-                content: "Texto de ejemplo: esto es un comentario aquí puedes ver el comentario etc...",
-                timestamp: new Date(),
-                userPhoto: null,
-                replies: [
-                    {
-                        replyId: "1-1",
-                        userName: "Usuario2",
-                        content: "Estoy de acuerdo con tu comentario, muy útil!",
-                        timestamp: new Date(),
-                        userPhoto: null
-                    },
-                    {
-                        replyId: "1-2", 
-                        userName: "Usuario3",
-                        content: "Gracias por la información adicional",
-                        timestamp: new Date(),
-                        userPhoto: null
-                    }
-                ]
-            },
-            {
-                commentId: "2",
-                userName: "Usuario4", 
-                content: "Otro comentario de ejemplo sin respuestas",
-                timestamp: new Date(),
-                userPhoto: null,
-                replies: []
-            }
-        ],
-        votes: [
-            { 
-                userId: "1", 
-                userName: "Usuario1", 
-                voteType: "Me gusta",
-                timestamp: new Date(),
-                userPhoto: null
-            }
-        ]
-    };
-    
-    renderDatasetInfo(datasetMock);
-    renderComments(datasetMock._id || 'mock-id');
-    renderVotes(datasetMock._id || 'mock-id');
 }
 
 function renderDatasetInfo(dataset) {
@@ -131,14 +69,45 @@ function renderDatasetInfo(dataset) {
         <p><strong>Tamaño del archivo:</strong> ${dataset.tamano ? dataset.tamano + ' MB' : '0 MB'}</p>
         <p><strong>Cantidad de descargas:</strong> ${dataset.descargas || 0}</p>
         <p><strong>Creado por:</strong> ${dataset.creadorId?.username || 'Desconocido'}</p>
-        ${dataset.estado ? `<p><strong>Estado:</strong> ${dataset.estado}</p>` : ''}
+        ${dataset.estado ? `<p><strong>Estado:</strong> <span class="estado-badge estado-${dataset.estado}">${dataset.estado}</span></p>` : ''}
         ${dataset.archivos ? `<p><strong>Archivos:</strong> ${typeof dataset.archivos === 'number' ? dataset.archivos : dataset.archivos.length}</p>` : ''}
     `;
 
     loadMedia(dataset);
-    setupDownloadButton(dataset);
+    setupActionButtons(dataset); // Cambiamos esta función
 }
 
+
+// Función para desactivar el dataset
+async function desactivarDataset(datasetId) {
+    if (!confirm('¿Estás seguro de que quieres desactivar este dataset?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/datasets/${datasetId}/estado`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                estado: 'desactivado'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Dataset desactivado exitosamente');
+            await loadDatasetData(datasetId);
+        } else {
+            alert('Error al desactivar el dataset: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error desactivando dataset:', error);
+        alert('Error al desactivar el dataset');
+    }
+}
 function loadMedia(dataset) {
     if (dataset.foto) {
         const imagePlaceholder = document.querySelector('.placeholder.image');
@@ -156,16 +125,36 @@ function loadMedia(dataset) {
     }
 }
 
-function setupDownloadButton(dataset) {
-    const downloadBtn = document.querySelector('.edit-btn');
+function setupActionButtons(dataset) {
+    const currentUser = getCurrentUser();
+    const isOwner = currentUser && dataset.creadorId && currentUser._id === dataset.creadorId._id;
     
-    downloadBtn.replaceWith(downloadBtn.cloneNode(true));
-    const newDownloadBtn = document.querySelector('.edit-btn');
+    const actionsContainer = document.querySelector('.container-btn-edit');
     
-    newDownloadBtn.addEventListener('click', () => {
+    // Limpiar contenedor de acciones
+    actionsContainer.innerHTML = '';
+    
+    // Botón de descarga (siempre visible)
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'edit-btn';
+    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+    downloadBtn.addEventListener('click', () => {
         downloadDataset(dataset);
     });
+    actionsContainer.appendChild(downloadBtn);
+    
+    // Botón de desactivar (solo para el dueño y si no está ya desactivado)
+    if (isOwner && dataset.estado !== 'desactivado') {
+        const desactivarBtn = document.createElement('button');
+        desactivarBtn.className = 'edit-btn';
+        desactivarBtn.innerHTML = '<i class="fas fa-power-off"></i> Desactivar';
+        desactivarBtn.addEventListener('click', () => {
+            desactivarDataset(dataset._id);
+        });
+        actionsContainer.appendChild(desactivarBtn);
+    }
 }
+
 
 async function downloadDataset(dataset) {
     if (dataset.archivos && dataset.archivos.length > 0) {
@@ -425,7 +414,6 @@ function createNoRepliesSection() {
   return noRepliesSection;
 }
 
-// ⚠️ SOLO UNA FUNCIÓN createReplyElement - ELIMINAR LA DUPLICADA
 function createReplyElement(reply) {
   const replyElement = document.createElement("div");
   replyElement.classList.add("reply-card");

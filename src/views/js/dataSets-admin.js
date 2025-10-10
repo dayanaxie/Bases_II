@@ -100,7 +100,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           toggleBtn.classList.add("pending");
           toggleBtn.innerHTML = `<i class="fa-solid fa-clock"></i>`;
           toggleBtn.title = "Pendiente"; // Tooltip
-        } 
+        } else{
+          // Estado desactivado
+          toggleBtn.classList.add("disabled");
+          toggleBtn.innerHTML = `<i class="fa-solid fa-circle-xmark"></i>`;
+          toggleBtn.title = "Desactivado"; // Tooltip
+        }
 
       // Botón ver
       const viewBtn = document.createElement("button");
