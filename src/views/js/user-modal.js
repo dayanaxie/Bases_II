@@ -195,7 +195,9 @@ class UserModal {
     async loadUserDatasets(userId) {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:3000/api/datasets?creator=${userId}`, {
+            // const response = await fetch(`http://localhost:3000/api/datasets?creator=${userId}`, {
+            const response = await fetch(`http://localhost:3000/api/datasets/creador/${userId}`, {
+
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

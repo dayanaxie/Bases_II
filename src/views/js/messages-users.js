@@ -140,8 +140,7 @@ class MessagesManager {
                 </div>
                 <div class="user-info">
                     <div class="user-name">${user.nombreCompleto || user.username}</div>
-                    <div class="user-username">@${user.username}</div>
-                    <div class="user-last-message">${this.getLastMessagePreview(user._id)}</div>
+                    <div class="user-username">@${user.username}</div> 
                 </div>
                 ${this.hasUnreadMessages(user._id) ? '<div class="unread-badge">1</div>' : ''}
             </div>

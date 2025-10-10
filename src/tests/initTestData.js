@@ -45,36 +45,28 @@ async function createAdminUser() {
 async function createTestUsers() {
   const testUsersData = [
     {
-      username: 'maria_garcia',
-      nombreCompleto: 'María García López',
-      correoElectronico: 'maria.garcia@email.com',
+      username: 'oni_user',
+      nombreCompleto: 'Oni User',
+      correoElectronico: 'oni@gmail.com',
       fechaNacimiento: new Date('1992-05-15'),
       tipoUsuario: 'usuario',
-      password: 'password123'
+      password: 'oni123'
     },
     {
-      username: 'carlos_rod',
-      nombreCompleto: 'Carlos Rodríguez Méndez',
-      correoElectronico: 'carlos.rodriguez@email.com',
+      username: 'xie_user',
+      nombreCompleto: 'Xie User',
+      correoElectronico: 'xie@gmail.com',
       fechaNacimiento: new Date('1988-11-23'),
       tipoUsuario: 'usuario',
-      password: 'password123'
+      password: 'xie123'
     },
     {
-      username: 'ana_martinez',
-      nombreCompleto: 'Ana Martínez Sánchez',
-      correoElectronico: 'ana.martinez@email.com',
+      username: 'god_user',
+      nombreCompleto: 'God User',
+      correoElectronico: 'god@gmail.com',
       fechaNacimiento: new Date('1995-03-08'),
       tipoUsuario: 'usuario',
-      password: 'password123'
-    },
-    {
-      username: 'javier_lopez',
-      nombreCompleto: 'Javier López Torres',
-      correoElectronico: 'javier.lopez@email.com',
-      fechaNacimiento: new Date('1990-07-19'),
-      tipoUsuario: 'usuario',
-      password: 'password123'
+      password: 'god123'
     }
   ];
 
@@ -128,7 +120,7 @@ async function createTestDatasets(users) {
       estado: 'aprobado',
       tamano: 45.2,
       descargas: 124,
-      creadorId: users[0]._id // maria_garcia
+      creadorId: users[0]._id // oni_user
     },
     {
       nombre: 'Imágenes Médicas para Detección de COVID-19',
@@ -136,7 +128,7 @@ async function createTestDatasets(users) {
       estado: 'aprobado',
       tamano: 256.8,
       descargas: 89,
-      creadorId: users[1]._id // carlos_rod
+      creadorId: users[1]._id // xie_user
     },
     {
       nombre: 'Datos Climáticos Históricos 2000-2023',
@@ -144,7 +136,7 @@ async function createTestDatasets(users) {
       estado: 'aprobado',
       tamano: 78.5,
       descargas: 67,
-      creadorId: users[2]._id // ana_martinez
+      creadorId: users[2]._id // god_user
     },
     {
       nombre: 'Transcripciones de Llamadas de Servicio al Cliente',
@@ -152,7 +144,7 @@ async function createTestDatasets(users) {
       estado: 'pendiente',
       tamano: 12.3,
       descargas: 23,
-      creadorId: users[3]._id // javier_lopez
+      creadorId: users[0]._id // oni_user
     },
     {
       nombre: 'Imágenes de Productos para E-commerce',
@@ -160,7 +152,7 @@ async function createTestDatasets(users) {
       estado: 'aprobado',
       tamano: 189.6,
       descargas: 156,
-      creadorId: users[0]._id // maria_garcia
+      creadorId: users[1]._id // xie_user
     }
   ];
 
@@ -203,20 +195,16 @@ async function createTestRelationships(users, datasets) {
   console.log('Creando relaciones de seguimiento...');
   
   try {
-    // María sigue a Carlos y Ana
-    await followUser(users[0]._id, users[1]._id); // maria -> carlos
-    await followUser(users[0]._id, users[2]._id); // maria -> ana
+    // Oni sigue a Xie y God
+    await followUser(users[0]._id, users[1]._id); // oni -> xie
+    await followUser(users[0]._id, users[2]._id); // oni -> god
     
-    // Carlos sigue a María y Javier
-    await followUser(users[1]._id, users[0]._id); // carlos -> maria
-    await followUser(users[1]._id, users[3]._id); // carlos -> javier
+    // Xie sigue a Oni
+    await followUser(users[1]._id, users[0]._id); // xie -> oni
     
-    // Ana sigue a María
-    await followUser(users[2]._id, users[0]._id); // ana -> maria
-    
-    // Javier sigue a Carlos y Ana
-    await followUser(users[3]._id, users[1]._id); // javier -> carlos
-    await followUser(users[3]._id, users[2]._id); // javier -> ana
+    // God sigue a Oni y Xie
+    await followUser(users[2]._id, users[0]._id); // god -> oni
+    await followUser(users[2]._id, users[1]._id); // god -> xie
     
     console.log('Relaciones de seguimiento creadas exitosamente!');
   } catch (error) {
