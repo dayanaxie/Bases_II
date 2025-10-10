@@ -491,12 +491,7 @@ class ProfileUser {
                             <h4>${follower.username || 'Usuario'}</h4>
                             <p>${follower.nombreCompleto || follower.correoElectronico || ''}</p>
                         </div>
-                    </div>
-                    <div class="user-actions-mini">
-                        <button class="action-btn" onclick="event.stopPropagation(); profileUser.unfollowUser('${follower._id}')">
-                            <i class="fas fa-user-minus"></i>
-                        </button>
-                    </div>
+                    </div> 
                 </div>
             `).join('');
         }
@@ -520,12 +515,7 @@ class ProfileUser {
                             <h4>${followed.username || 'Usuario'}</h4>
                             <p>${followed.nombreCompleto || followed.correoElectronico || ''}</p>
                         </div>
-                    </div>
-                    <div class="user-actions-mini">
-                        <button class="action-btn" onclick="event.stopPropagation(); profileUser.unfollowUser('${followed._id}')">
-                            <i class="fas fa-user-times"></i>
-                        </button>
-                    </div>
+                    </div> 
                 </div>
             `).join('');
         }

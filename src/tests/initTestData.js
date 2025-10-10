@@ -53,12 +53,12 @@ async function createTestUsers() {
       password: 'oni123'
     },
     {
-      username: 'xie_user',
-      nombreCompleto: 'Xie User',
-      correoElectronico: 'xie@gmail.com',
+      username: 'mon_user',
+      nombreCompleto: 'mon User',
+      correoElectronico: 'mon@gmail.com',
       fechaNacimiento: new Date('1988-11-23'),
       tipoUsuario: 'usuario',
-      password: 'xie123'
+      password: 'mon123'
     },
     {
       username: 'god_user',
@@ -128,7 +128,7 @@ async function createTestDatasets(users) {
       estado: 'aprobado',
       tamano: 256.8,
       descargas: 89,
-      creadorId: users[1]._id // xie_user
+      creadorId: users[1]._id // mon_user
     },
     {
       nombre: 'Datos Climáticos Históricos 2000-2023',
@@ -152,7 +152,7 @@ async function createTestDatasets(users) {
       estado: 'aprobado',
       tamano: 189.6,
       descargas: 156,
-      creadorId: users[1]._id // xie_user
+      creadorId: users[1]._id // mon_user
     }
   ];
 
@@ -195,16 +195,16 @@ async function createTestRelationships(users, datasets) {
   console.log('Creando relaciones de seguimiento...');
   
   try {
-    // Oni sigue a Xie y God
-    await followUser(users[0]._id, users[1]._id); // oni -> xie
+    // Oni sigue a mon y God
+    await followUser(users[0]._id, users[1]._id); // oni -> mon
     await followUser(users[0]._id, users[2]._id); // oni -> god
     
-    // Xie sigue a Oni
-    await followUser(users[1]._id, users[0]._id); // xie -> oni
+    // mon sigue a Oni
+    await followUser(users[1]._id, users[0]._id); // mon -> oni
     
-    // God sigue a Oni y Xie
+    // God sigue a Oni y mon
     await followUser(users[2]._id, users[0]._id); // god -> oni
-    await followUser(users[2]._id, users[1]._id); // god -> xie
+    await followUser(users[2]._id, users[1]._id); // god -> mon
     
     console.log('Relaciones de seguimiento creadas exitosamente!');
   } catch (error) {

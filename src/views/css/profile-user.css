@@ -12,22 +12,24 @@ body {
 
 .profile-container {
   width: 600px;
-  height: 80%;
-    /* margin: 0 auto; */
+  /* REMOVER: height: 80%; */
+  min-height: 80vh; /* Altura mínima en lugar de fija */
+  max-height: 90vh; /* Altura máxima para pantallas grandes */
   margin-bottom: 2%;
   padding: 16px;
-    background: var(--variable-collection-objeto-0);
-    /* min-height: 100vh; */
+  background: var(--variable-collection-objeto-0);
   border-radius: 10px;
+  overflow-y: auto; /* Scroll interno si es necesario */
 }
 
 .header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid var(--variable-collection-objeto-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--variable-collection-objeto-1);
+  flex-shrink: 0;
 }
 
 .header-container h1 {
@@ -101,12 +103,13 @@ body {
 
 /* Pestañas */
 .profile-tabs {
-    display: flex;
-    margin-bottom: 2rem;
-    border-bottom: 2px solid var(--variable-collection-objeto-1);
-    background: var(--variable-collection-fondo-0);
-    border-radius: 10px 10px 0 0;
-    overflow: hidden;
+  display: flex;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid var(--variable-collection-objeto-1);
+  background: var(--variable-collection-fondo-0);
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -138,20 +141,33 @@ body {
 
 /* Contenido de pestañas */
 .tab-content {
-    display: none;
+  display: none;
+  /* Agregar estas propiedades */
+  min-height: 0; /* Permite que se reduzca */
+  flex: 1; /* Ocupa el espacio disponible */
 }
 
 .tab-content.active {
-    display: block;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs-content-area {
+  flex: 1; /* Ocupa todo el espacio restante */
+  min-height: 0; /* Permite que se reduzca */
+  display: flex;
+  flex-direction: column;
 }
 
 /* Información del perfil */
 .profile-info {
-    background: var(--variable-collection-fondo-0);
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    border: 1px solid var(--variable-collection-objeto-1);
+  background: var(--variable-collection-fondo-0);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--variable-collection-objeto-1);
+  /* Agregar para flexibilidad */
+  min-height: 200px;
 }
 
 .info-group {
@@ -181,18 +197,19 @@ body {
     word-break: break-word;
 }
 
-/* Secciones de seguidores y datasets - MEJORADO */
+/* Secciones de seguidores y datasets */
 .followers-section,
 .following-section,
 .datasets-section {
-    background: var(--variable-collection-fondo-0);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--variable-collection-objeto-1);
-    height: 300px; /* Altura fija para el scroll */
-    display: flex;
-    flex-direction: column;
+  background: var(--variable-collection-fondo-0);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--variable-collection-objeto-1);
+  min-height: 200px; /* Altura mínima en lugar de fija */
+  max-height: 400px; /* Altura máxima para evitar que crezcan demasiado */
+  display: flex;
+  flex-direction: column;
 }
 
 .section-header {
@@ -224,10 +241,11 @@ body {
 .followers-list,
 .following-list,
 .datasets-list {
-    flex: 1; /* Ocupa el espacio restante */
-    overflow-y: auto;
-    overflow-x: hidden;
-    max-height: none; /* Quitamos el max-height anterior */
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Agregar altura mínima */
+  min-height: 150px;
 }
 
 /* Personalización del scrollbar */
@@ -381,14 +399,15 @@ body {
 
 /* Estados vacíos */
 .empty-state {
-    text-align: center;
-    padding: 3rem 2rem;
-    color: var(--variable-collection-text-2);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+  text-align: center;
+  padding: 2rem;
+  color: var(--variable-collection-text-2);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 150px;
 }
 
 .empty-state i {
@@ -472,41 +491,26 @@ body {
 
 /* Responsive*/
 @media (max-width: 768px) {
-    .profile-container {
-        padding: 15px;
-    }
-    
-    .profile-tabs {
-        flex-direction: column;
-    }
-    
-    .followers-section,
-    .following-section,
-    .datasets-section {
-        height: 250px; /* Menor altura en móviles */
-        padding: 1rem;
-    }
-    
-    .user-item,
-    .dataset-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-        min-height: auto;
-    }
-    
-    .user-info-mini {
-        width: 100%;
-    }
-    
-    .dataset-meta {
-        gap: 0.5rem;
-    }
-    
-    .user-actions-mini {
-        width: 100%;
-        justify-content: flex-end;
-    }
+  .profile-container {
+    width: 95%;
+    min-height: 85vh;
+    max-height: 95vh;
+    margin: 2.5% auto;
+    padding: 12px;
+  }
+  
+  .followers-section,
+  .following-section,
+  .datasets-section {
+    min-height: 150px;
+    max-height: 300px;
+    padding: 1rem;
+  }
+  
+  .profile-info {
+    padding: 1.5rem;
+    min-height: 150px;
+  }
 }
 
 /* Para pantallas muy grandes */

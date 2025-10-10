@@ -108,6 +108,8 @@ async function desactivarDataset(datasetId) {
         alert('Error al desactivar el dataset');
     }
 }
+
+
 function loadMedia(dataset) {
     if (dataset.foto) {
         const imagePlaceholder = document.querySelector('.placeholder.image');
@@ -829,19 +831,11 @@ function openCommentModal(datasetId) {
       
       <div class="modal-footer" style="
         display: flex;
-        justify-content: flex-end;
+        justify-content: center;
         gap: 12px;
         margin-top: 20px;
       "> 
-        <button class="submit-comment-btn" style="
-          padding: 10px 20px;
-          border: none;
-          border-radius: 8px;
-          background: var(--variable-collection-contraste);
-          color: var(--variable-collection-text-2);
-          cursor: pointer;
-          font-weight: bold;
-        ">Publicar Comentario</button>
+        <button class="submit-comment-btn">Publicar Comentario</button>
       </div>
     </div>
   `;
@@ -1010,20 +1004,11 @@ function openVoteModal(datasetId, currentVote = null) {
       
       <div class="modal-footer" style="
         display: flex;
-        justify-content: flex-end;
+        justify-content: center;
         gap: 12px;
         margin-top: 20px;
       "> 
-        <button class="submit-vote-btn" style="
-          padding: 10px 20px;
-          border: none;
-          border-radius: 8px;
-          background: var(--variable-collection-contraste);
-          color: var(--variable-collection-text-2);
-          cursor: pointer;
-          font-weight: bold;
-          flex: 1;
-        ">${currentVote ? "Actualizar Voto" : "Guardar Voto"}</button>
+        <button class="submit-vote-btn">${currentVote ? "Actualizar Voto" : "Guardar Voto"}</button>
       </div>
     </div>
   `;
